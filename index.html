@@ -536,6 +536,19 @@
       <span id="left-label">— Load Left XML —</span>
     </div>
     <div style="position:relative;flex-shrink:0;display:flex;align-items:center;gap:0">
+      <button id="infobar-parallel" onclick="setParallel(true)" style="
+        border:none;background:var(--btn-active-bg);color:var(--btn-active-text);
+        font-family:Georgia,serif;font-size:10px;font-weight:bold;
+        padding:4px 7px;border-radius:3px 0 0 3px;cursor:pointer;transition:all 0.2s;
+        border-right:1px solid rgba(0,0,0,0.2);height:36px;
+      ">⊞</button>
+      <button id="infobar-single" onclick="setParallel(false)" style="
+        border:none;background:var(--btn-inactive-bg);color:var(--btn-inactive-text);
+        outline:1px solid var(--btn-inactive-border);
+        font-family:Georgia,serif;font-size:10px;font-weight:bold;
+        padding:4px 7px;border-radius:0;cursor:pointer;transition:all 0.2s;
+        height:36px;margin-right:4px;
+      ">▭</button>
       <button id="chap-btn" onclick="toggleChapDrop()">Ch. —</button>
       <button class="btn-round" id="play-btn" title="Auto-scroll" style="width:28px;height:28px;border-left:none;border-radius:0 4px 4px 0;margin-left:-1px">▶</button>
       <div id="chap-dropdown"></div>
@@ -921,6 +934,16 @@ function setParallel(p) {
   state.parallel = p;
   $('btn-parallel').classList.toggle('on', p);
   $('btn-single').classList.toggle('on', !p);
+  // Sync infobar toggle buttons
+  const ip = $('infobar-parallel'), is_ = $('infobar-single');
+  if (ip && is_) {
+    ip.style.background   = p  ? 'var(--btn-active-bg)'   : 'var(--btn-inactive-bg)';
+    ip.style.color        = p  ? 'var(--btn-active-text)'  : 'var(--btn-inactive-text)';
+    ip.style.outline      = p  ? 'none' : '1px solid var(--btn-inactive-border)';
+    is_.style.background  = !p ? 'var(--btn-active-bg)'   : 'var(--btn-inactive-bg)';
+    is_.style.color       = !p ? 'var(--btn-active-text)'  : 'var(--btn-inactive-text)';
+    is_.style.outline     = !p ? 'none' : '1px solid var(--btn-inactive-border)';
+  }
   $('panels').classList.toggle('single', !p);
   $('panel-right').style.display = (!p && state.activeSide === 'left') ? 'none' : '';
   $('panel-left').style.display  = (!p && state.activeSide === 'right') ? 'none' : '';
