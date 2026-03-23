@@ -369,6 +369,19 @@
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.15; } }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Verse connector lines ── */
+  #verse-lines { overflow: visible; }
+  #verse-lines line {
+    stroke: var(--gold);
+    stroke-width: 0.5;
+    opacity: 0.18;
+    transition: opacity 0.2s;
+  }
+  #verse-lines line.active {
+    opacity: 0.55;
+    stroke-width: 1;
+  }
+
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -505,7 +518,8 @@
   </div>
 
   <!-- Panels -->
-  <div id="panels">
+  <div id="panels" style="position:relative">
+    <svg id="verse-lines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10" aria-hidden="true"></svg>
     <div class="panel" id="panel-left">
       <div class="panel-head">
         <div class="panel-accent"></div>
@@ -673,50 +687,99 @@ const bodyRight = () => $('body-right');
 // Tracks which verse is at the top of the viewport for each panel,
 // then syncs the other panel to the same verse number.
 
-let currentTopVerse = null;  // verse number currently at top of view
-let syncingVerse = false;
+let currentTopVerse = null;
+
+// ── Verse connector lines ─────────────────────────────────────────────────────
+// Draws faint lines between matching verse numbers across both panels.
+// Runs on every scroll event in parallel mode.
+
+function getVerseRowMidY(panelEl, vnum) {
+  const row = panelEl.querySelector(`[data-vnum="${vnum}"]`);
+  if (!row) return null;
+  const panelRect = panelEl.getBoundingClientRect();
+  const rowRect   = row.getBoundingClientRect();
+  const midY = rowRect.top + rowRect.height / 2;
+  // Only return if the row is actually visible in the panel viewport
+  if (midY < panelRect.top || midY > panelRect.bottom) return null;
+  return midY;
+}
 
 function getTopVerse(panelEl) {
-  // Find the first verse-row whose top is at or just below the panel's scrollTop
   const rows = panelEl.querySelectorAll('.verse-row');
-  let best = null;
-  for (const row of rows) {
-    if (row.offsetTop >= panelEl.scrollTop - 10) {
-      best = row.dataset.vnum;
-      break;
-    }
-  }
+  const targetY = panelEl.scrollTop + 32;
+  let best = null, bestDist = Infinity;
+  rows.forEach(row => {
+    const dist = Math.abs(row.offsetTop - targetY);
+    if (dist < bestDist) { bestDist = dist; best = row.dataset.vnum; }
+  });
   return best;
 }
 
 function scrollPanelToVerse(panelEl, vnum) {
   if (!vnum) return;
   const target = panelEl.querySelector(`[data-vnum="${vnum}"]`);
-  if (target) panelEl.scrollTop = target.offsetTop - 16;
+  if (target) panelEl.scrollTop = Math.max(0, target.offsetTop - 16);
 }
 
-function onPanelScroll(srcEl, dstEl) {
-  if (syncingVerse || state.autoOn) return;
-  const vnum = getTopVerse(srcEl);
-  if (!vnum || vnum === currentTopVerse) return;
-  currentTopVerse = vnum;
-  // Update verse select
-  $('sel-verse').value = vnum;
-  state.verse = vnum;
-  // Highlight in both panels
+function highlightVerse(vnum) {
   document.querySelectorAll('.verse-row').forEach(r =>
     r.classList.toggle('highlighted', r.dataset.vnum === vnum)
   );
-  // Sync destination panel (parallel mode only)
-  if (state.parallel) {
-    syncingVerse = true;
-    scrollPanelToVerse(dstEl, vnum);
-    setTimeout(() => { syncingVerse = false; }, 80);
-  }
+  $('sel-verse').value = vnum;
+  state.verse = vnum;
 }
 
-$('body-left').addEventListener('scroll',  () => onPanelScroll($('body-left'),  $('body-right')));
-$('body-right').addEventListener('scroll', () => onPanelScroll($('body-right'), $('body-left')));
+function drawVerseLines() {
+  const svg = $('verse-lines');
+  if (!svg || !state.parallel || !state.verses) { if (svg) svg.innerHTML = ''; return; }
+
+  const leftEl  = $('body-left');
+  const rightEl = $('body-right');
+  const svgRect = svg.getBoundingClientRect();
+
+  // Get all verse numbers visible in EITHER panel
+  const allNums = state.verses.nums;
+  const lines = [];
+
+  allNums.forEach(vnum => {
+    const leftY  = getVerseRowMidY(leftEl,  vnum);
+    const rightY = getVerseRowMidY(rightEl, vnum);
+    if (leftY === null || rightY === null) return;
+
+    // Convert to SVG-local coordinates
+    const y1 = leftY  - svgRect.top;
+    const y2 = rightY - svgRect.top;
+
+    // x1 = right edge of left panel, x2 = left edge of right panel
+    const leftPanelRect  = leftEl.getBoundingClientRect();
+    const rightPanelRect = rightEl.getBoundingClientRect();
+    const x1 = leftPanelRect.right  - svgRect.left;
+    const x2 = rightPanelRect.left  - svgRect.left;
+
+    const isActive = vnum === currentTopVerse;
+    lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${isActive ? 'active' : ''}"/>`);
+  });
+
+  svg.innerHTML = lines.join('');
+}
+
+let lineRaf = null;
+function scheduleLineRedraw() {
+  if (lineRaf) return;
+  lineRaf = requestAnimationFrame(() => { lineRaf = null; drawVerseLines(); });
+}
+
+function onPanelScroll(srcEl) {
+  const vnum = getTopVerse(srcEl);
+  if (vnum && vnum !== currentTopVerse) {
+    currentTopVerse = vnum;
+    highlightVerse(vnum);
+  }
+  scheduleLineRedraw();
+}
+
+$('body-left').addEventListener('scroll',  () => onPanelScroll($('body-left')));
+$('body-right').addEventListener('scroll', () => onPanelScroll($('body-right')));
 
 // ── Auto-scroll ───────────────────────────────────────────────────────────────
 // In parallel mode: scroll both panels together via body-left
@@ -739,16 +802,13 @@ function autoLoop(ts) {
       const other = $('body-right');
       other.scrollTop = el.scrollTop;
     }
-    // Track top verse during auto-scroll
+    // Track top verse during auto-scroll + redraw connector lines
     const v = getTopVerse(el);
     if (v && v !== currentTopVerse) {
       currentTopVerse = v;
-      state.verse = v;
-      $('sel-verse').value = v;
-      document.querySelectorAll('.verse-row').forEach(r =>
-        r.classList.toggle('highlighted', r.dataset.vnum === v)
-      );
+      highlightVerse(v);
     }
+    scheduleLineRedraw();
     if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
       setAuto(false); lastTs = null; return;
     }
@@ -785,6 +845,7 @@ function setParallel(p) {
   if (state.verses) {
     $('single-tabs').classList.toggle('visible', !p);
   }
+  setTimeout(drawVerseLines, 50);
 }
 
 function setActiveSide(side) {
@@ -929,6 +990,8 @@ function renderVerses() {
   renderPanel('body-left', 'left');
   renderPanel('body-right', 'right');
   updatePanelLabels();
+  currentTopVerse = null;
+  setTimeout(drawVerseLines, 80);
 }
 
 function renderPanel(id, side) {
@@ -1279,6 +1342,7 @@ async function autoLoadDefaults() {
 updateSliders();
 updateEmptyPanels();
 updateChapBtn();
+window.addEventListener('resize', scheduleLineRedraw);
 autoLoadDefaults();
 </script>
 </body>
