@@ -466,7 +466,7 @@
         <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
         <span id="spd-label" style="font-size:9px;color:var(--gold);opacity:0.7;width:36px;text-align:center"></span>
         <div class="slider-wrap" style="width:100px">
-          <input type="range" id="spd-slider" min="1" max="10" value="2" style="width:100%">
+          <input type="range" id="spd-slider" min="1" max="20" value="4" style="width:100%">
           <div class="slider-ticks" id="spd-ticks"></div>
         </div>
         <span id="spd-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:28px">2.0</span>
@@ -618,7 +618,7 @@ const state = {
   leftLabel: '', rightLabel: '',
   book: '', chap: '', verse: '',
   verses: null,      // { left: {}, right: {}, nums: [] }
-  autoOn: false, speed: 2, microSpeed: 1.0, fontSize: 15,
+  autoOn: false, speed: 4, microSpeed: 1.0, fontSize: 15,
   parallel: true, activeSide: 'left',
   dark: true, ribbonOpen: true,
   modalSide: null, modalMethod: null,
@@ -626,7 +626,7 @@ const state = {
 };
 
 const BOOK_NAMES = {1:"Genesis",2:"Exodus",3:"Leviticus",4:"Numbers",5:"Deuteronomy",6:"Joshua",7:"Judges",8:"Ruth",9:"1 Samuel",10:"2 Samuel",11:"1 Kings",12:"2 Kings",13:"1 Chronicles",14:"2 Chronicles",15:"Ezra",16:"Nehemiah",17:"Esther",18:"Job",19:"Psalms",20:"Proverbs",21:"Ecclesiastes",22:"Song of Solomon",23:"Isaiah",24:"Jeremiah",25:"Lamentations",26:"Ezekiel",27:"Daniel",28:"Hosea",29:"Joel",30:"Amos",31:"Obadiah",32:"Jonah",33:"Micah",34:"Nahum",35:"Habakkuk",36:"Zephaniah",37:"Haggai",38:"Zechariah",39:"Malachi",40:"Matthew",41:"Mark",42:"Luke",43:"John",44:"Acts",45:"Romans",46:"1 Corinthians",47:"2 Corinthians",48:"Galatians",49:"Ephesians",50:"Philippians",51:"Colossians",52:"1 Thessalonians",53:"2 Thessalonians",54:"1 Timothy",55:"2 Timothy",56:"Titus",57:"Philemon",58:"Hebrews",59:"James",60:"1 Peter",61:"2 Peter",62:"1 John",63:"2 John",64:"3 John",65:"Jude",66:"Revelation"};
-const SPD = ['','Slow','','','Medium','','','Fast','','','Turbo'];
+const SPD = ['','Slow','','','','','','','','','Medium','','','','Fast','','','','','','Turbo'];
 
 // ── XML Parser ────────────────────────────────────────────────────────────────
 function parseXML(text) {
@@ -821,7 +821,7 @@ function autoLoop(ts) {
   const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
-    const px = (ts - lastTs) * state.speed * state.microSpeed * 0.03;
+    const px = (ts - lastTs) * state.speed * state.microSpeed * 0.012;
     el.scrollTop += px;
     // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
     if (state.parallel) {
@@ -1168,14 +1168,14 @@ $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.a
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
 function updateSliders() {
-  updateSlider($('spd-slider'),   $('spd-ticks'),   10, state.speed,      1,  10);
+  updateSlider($('spd-slider'),   $('spd-ticks'),   10, state.speed,      1,  20);
   updateSlider($('micro-slider'), $('micro-ticks'),  10, state.microSpeed * 10, 1, 10);
   updateSlider($('font-slider'),  $('font-ticks'),   10, state.fontSize,   10, 28);
   const effective = (state.speed * state.microSpeed).toFixed(1);
   $('spd-val').textContent = effective;
   $('font-val').textContent = state.fontSize;
   $('spd-label').textContent = SPD[state.speed] || '';
-  $('micro-val').textContent = '.×' + (state.microSpeed * 10).toFixed(0);
+  $('micro-val').textContent = '×' + state.microSpeed.toFixed(1);
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
