@@ -118,10 +118,10 @@
   #chap-dropdown button:hover, #chap-dropdown button.active { background: var(--gold-faint); color: var(--gold); }
 
   /* ── Panels ── */
-  #panels { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; min-height: 0; }
+  #panels { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; min-height: 0; min-width: 0; }
   #panels.single { grid-template-columns: 1fr; }
 
-  .panel { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+  .panel { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-width: 0; }
   #panel-left { border-right: 1px solid var(--divider); }
   #panels.single #panel-left { border-right: none; }
 
@@ -142,17 +142,18 @@
   }
   .panel-load-btn:hover { opacity: 1; color: var(--gold); }
 
-  .panel-body { padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg); }
+  .panel-body { padding: 16px 20px; overflow-y: auto; overflow-x: hidden; flex: 1; background: var(--bg); min-width: 0; }
 
   /* ── Verses ── */
   .verse-row {
     display: flex; gap: 12px; margin-bottom: 14px;
     animation: fadeUp 0.3s ease both;
     border-left: 2px solid transparent; padding-left: 6px; border-radius: 4px; transition: background 0.3s;
+    min-width: 0;
   }
   .verse-row.highlighted { background: var(--hl-bg); border-left-color: var(--hl-border); }
   .verse-num { color: var(--gold); min-width: 22px; padding-top: 3px; text-align: right; flex-shrink: 0; opacity: 0.7; font-weight: bold; }
-  .verse-text { line-height: 1.9; color: var(--verse); font-family: Georgia, serif; }
+  .verse-text { line-height: 1.9; color: var(--verse); font-family: Georgia, serif; word-break: break-word; overflow-wrap: anywhere; }
 
   /* ── Empty state ── */
   .empty-state {
