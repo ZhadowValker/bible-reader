@@ -856,6 +856,7 @@ function setParallel(p) {
   if (state.verses) {
     $('single-tabs').classList.toggle('visible', !p);
   }
+  equaliseVerseHeights();
   setTimeout(drawVerseLines, 50);
 }
 
@@ -998,8 +999,11 @@ $('btn-read').addEventListener('click', () => {
 });
 
 function renderVerses() {
-  renderPanel('body-left', 'left');
+  // Render both panels first, then equalise row heights so verse N
+  // on the left and verse N on the right always share the same Y.
+  renderPanel('body-left',  'left');
   renderPanel('body-right', 'right');
+  equaliseVerseHeights();
   updatePanelLabels();
   currentTopVerse = null;
   setTimeout(drawVerseLines, 80);
@@ -1021,6 +1025,33 @@ function renderPanel(id, side) {
       <div class="verse-text" style="font-size:${state.fontSize}px">${text}</div>
     `;
     el.appendChild(row);
+  });
+}
+
+function equaliseVerseHeights() {
+  // For every verse number, find the taller of the two rows and give the
+  // shorter one a bottom-padding so both rows end up the same height.
+  // This means verse N on the left and verse N on the right always start
+  // at the exact same Y — no connector lines needed, and no scroll correction.
+  if (!state.verses || !state.parallel) return;
+  const leftEl  = $('body-left');
+  const rightEl = $('body-right');
+
+  // Reset any previous padding first
+  leftEl.querySelectorAll('.verse-row').forEach(r => r.style.paddingBottom = '');
+  rightEl.querySelectorAll('.verse-row').forEach(r => r.style.paddingBottom = '');
+
+  state.verses.nums.forEach(n => {
+    const lRow = leftEl.querySelector(`[data-vnum="${n}"]`);
+    const rRow = rightEl.querySelector(`[data-vnum="${n}"]`);
+    if (!lRow || !rRow) return;
+    const lH = lRow.offsetHeight;
+    const rH = rRow.offsetHeight;
+    if (lH > rH) {
+      rRow.style.paddingBottom = (lH - rH) + 'px';
+    } else if (rH > lH) {
+      lRow.style.paddingBottom = (rH - lH) + 'px';
+    }
   });
 }
 
@@ -1146,6 +1177,8 @@ $('font-slider').addEventListener('input', e => {
   state.fontSize = +e.target.value; updateSliders();
   document.querySelectorAll('.verse-text').forEach(el => el.style.fontSize = state.fontSize + 'px');
   document.querySelectorAll('.verse-num').forEach(el => el.style.fontSize = Math.max(9, state.fontSize - 4) + 'px');
+  equaliseVerseHeights();
+  scheduleLineRedraw();
 });
 
 // ── Chapter dropdown ──────────────────────────────────────────────────────────
