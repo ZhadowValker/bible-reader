@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>✝ Bible Reader</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: Georgia, serif; }
+
+  :root {
+    --bg: #0e0c09; --bar: #161410; --ribbon: #120f0b; --panel-head: #141210;
+    --text: #d4c5a0; --verse: #f0e4c8; --muted: #8a7d60;
+    --gold: #c9a84c; --gold-faint: rgba(201,168,76,0.1); --gold-border: rgba(201,168,76,0.22);
+    --divider: rgba(201,168,76,0.15); --bar-border: rgba(201,168,76,0.18);
+    --sel-bg: #1a1710; --sel-text: #f0e4c8; --track-empty: #252010;
+    --hl-bg: rgba(201,168,76,0.08); --hl-border: rgba(201,168,76,0.45);
+    --btn-active-bg: linear-gradient(135deg,#7a5a1a,#c9a84c); --btn-active-text: #0e0c09;
+    --btn-inactive-bg: rgba(201,168,76,0.08); --btn-inactive-text: #c9a84c; --btn-inactive-border: rgba(201,168,76,0.22);
+    --spin-border: #2a2416;
+    --overlay: rgba(14,12,9,0.88);
+    --modal-bg: #161410; --modal-border: rgba(201,168,76,0.3);
+    --input-bg: #0e0c09;
+    --drop-zone: rgba(201,168,76,0.05); --drop-zone-active: rgba(201,168,76,0.12);
+    --right-color: #8ab4c9;
+  }
+
+  body.light {
+    --bg: #faf7f0; --bar: #f0ebe0; --ribbon: #e8e2d4; --panel-head: #ede8dc;
+    --text: #2a1f0a; --verse: #1a1206; --muted: #7a6840;
+    --gold: #7a5a1a; --gold-faint: rgba(122,90,26,0.08); --gold-border: rgba(122,90,26,0.25);
+    --divider: rgba(122,90,26,0.18); --bar-border: rgba(122,90,26,0.2);
+    --sel-bg: #f5f0e6; --sel-text: #2a1f0a; --track-empty: #d8d0bc;
+    --hl-bg: rgba(122,90,26,0.07); --hl-border: rgba(122,90,26,0.4);
+    --btn-active-bg: linear-gradient(135deg,#7a5a1a,#c9a84c); --btn-active-text: #fff;
+    --btn-inactive-bg: rgba(122,90,26,0.07); --btn-inactive-text: #7a5a1a; --btn-inactive-border: rgba(122,90,26,0.22);
+    --spin-border: #c8c0a8;
+    --overlay: rgba(250,247,240,0.9);
+    --modal-bg: #f0ebe0; --modal-border: rgba(122,90,26,0.3);
+    --input-bg: #faf7f0;
+    --drop-zone: rgba(122,90,26,0.04); --drop-zone-active: rgba(122,90,26,0.1);
+    --right-color: #4a7a99;
+  }
+
+  body { background: var(--bg); color: var(--text); }
+
+  #app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    display: flex; align-items: center; gap: 10;
+    padding: 6px 14px; background: var(--bar);
+    border-bottom: 1px solid var(--bar-border); flex-shrink: 0;
+    gap: 10px;
+  }
+  #toolbar-title { font-size: 13px; letter-spacing: 1px; color: var(--gold); font-style: italic; font-weight: bold; }
+  #toolbar-status { margin-left: auto; font-size: 11px; color: var(--muted); font-style: italic; }
+
+  /* ── Ribbon ── */
+  #ribbon { background: var(--ribbon); border-bottom: 1px solid var(--bar-border); flex-shrink: 0; }
+  #ribbon-nav {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 9px 16px; border-bottom: 1px solid var(--divider);
+  }
+  #ribbon-settings {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 9px 16px;
+  }
+  .ribbon-label {
+    font-size: 8px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--gold); opacity: 0.65; white-space: nowrap;
+  }
+  .ribbon-divider { width: 1px; align-self: stretch; background: var(--divider); }
+
+  /* ── Info bar ── */
+  #infobar {
+    display: flex; align-items: center;
+    background: var(--panel-head); border-bottom: 1px solid var(--bar-border);
+    flex-shrink: 0; min-height: 36px; position: relative;
+  }
+  #infobar-left, #infobar-right {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; padding: 0 6px; cursor: pointer;
+  }
+  #infobar-left span { color: var(--gold); font-size: 11px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #infobar-right span { color: var(--right-color); font-size: 11px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  #chap-btn {
+    background: transparent; border: none; cursor: pointer;
+    border-left: 1px solid var(--bar-border); border-right: 1px solid var(--bar-border);
+    padding: 0 18px; height: 36px; display: flex; align-items: center; gap: 5px;
+    color: var(--muted); font-family: Georgia, serif;
+    font-size: 12px; letter-spacing: 1px; font-weight: bold; transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  #chap-btn.active { color: var(--gold); }
+  #chap-btn:hover { background: var(--gold-faint); }
+  #chap-dropdown {
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    background: var(--bar); border: 1px solid var(--gold-border);
+    border-radius: 6px; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    max-height: 220px; overflow-y: auto; min-width: 90px; display: none;
+  }
+  #chap-dropdown.open { display: block; }
+  #chap-dropdown button {
+    display: block; width: 100%; padding: 6px 16px;
+    background: transparent; border: none; color: var(--text);
+    font-family: Georgia, serif; font-size: 12px; cursor: pointer;
+    text-align: center; transition: background 0.1s;
+  }
+  #chap-dropdown button:hover, #chap-dropdown button.active { background: var(--gold-faint); color: var(--gold); }
+
+  /* ── Panels ── */
+  #panels { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; min-height: 0; }
+  #panels.single { grid-template-columns: 1fr; }
+
+  .panel { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+  #panel-left { border-right: 1px solid var(--divider); }
+  #panels.single #panel-left { border-right: none; }
+
+  .panel-head {
+    padding: 6px 16px; background: var(--panel-head);
+    border-bottom: 1px solid var(--divider);
+    font-size: 11px; font-style: italic; color: var(--gold);
+    flex-shrink: 0; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-head.right { color: var(--right-color); }
+  .panel-accent { width: 3px; height: 14px; background: var(--gold); border-radius: 2px; flex-shrink: 0; opacity: 0.8; }
+  .panel-accent.right { background: var(--right-color); }
+  .panel-load-btn {
+    margin-left: auto; background: transparent; border: 1px solid var(--gold-border);
+    color: var(--muted); border-radius: 3px; padding: 2px 8px; cursor: pointer;
+    font-size: 10px; font-family: Georgia, serif; opacity: 0.7; transition: all 0.2s;
+  }
+  .panel-load-btn:hover { opacity: 1; color: var(--gold); }
+
+  .panel-body { padding: 16px 20px; overflow-y: auto; flex: 1; background: var(--bg); }
+
+  /* ── Verses ── */
+  .verse-row {
+    display: flex; gap: 12px; margin-bottom: 14px;
+    animation: fadeUp 0.3s ease both;
+    border-left: 2px solid transparent; padding-left: 6px; border-radius: 4px; transition: background 0.3s;
+  }
+  .verse-row.highlighted { background: var(--hl-bg); border-left-color: var(--hl-border); }
+  .verse-num { color: var(--gold); min-width: 22px; padding-top: 3px; text-align: right; flex-shrink: 0; opacity: 0.7; font-weight: bold; }
+  .verse-text { line-height: 1.9; color: var(--verse); font-family: Georgia, serif; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 16px; padding: 40px 24px; text-align: center;
+  }
+  .empty-icon { font-size: 36px; opacity: 0.12; }
+  .empty-text { color: var(--muted); font-style: italic; font-size: 13px; max-width: 220px; }
+  .empty-load-btn {
+    border: 1px solid var(--gold); background: var(--gold-faint);
+    color: var(--gold); border-radius: 6px; padding: 8px 20px; cursor: pointer;
+    font-family: Georgia, serif; font-size: 12px; font-weight: bold;
+    transition: all 0.2s; letter-spacing: 0.5px;
+  }
+  .empty-load-btn:hover { background: var(--gold); color: var(--btn-active-text); }
+  .empty-load-btn.right { border-color: var(--right-color); color: var(--right-color); background: rgba(138,180,201,0.08); }
+
+  /* ── Single-view tabs ── */
+  #single-tabs { display: none; flex-shrink: 0; }
+  #single-tabs.visible { display: flex; background: var(--ribbon); border-bottom: 1px solid var(--bar-border); }
+  #single-tabs button {
+    flex: 1; padding: 7px 0; border: none;
+    font-family: Georgia, serif; font-size: 11px; font-style: italic;
+    letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s;
+    background: transparent; color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+  #single-tabs button.active-left { background: var(--gold-faint); color: var(--gold); border-bottom-color: var(--gold); }
+  #single-tabs button.active-right { background: var(--gold-faint); color: var(--right-color); border-bottom-color: var(--right-color); }
+
+  /* ── Buttons ── */
+  button { font-family: Georgia, serif; }
+
+  .btn-round {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold-border);
+    background: transparent; color: var(--muted); cursor: not-allowed;
+    font-size: 11px; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-round.active-play {
+    background: var(--btn-active-bg); color: var(--btn-active-text);
+    box-shadow: 0 0 8px var(--hl-border); cursor: pointer;
+  }
+  .btn-round.ready { color: var(--gold); cursor: pointer; }
+
+  .btn-toggle {
+    border: none; font-weight: bold; font-size: 11px; padding: 5px 12px; border-radius: 4px;
+    cursor: pointer; letter-spacing: 0.3px; transition: all 0.2s;
+    background: var(--btn-inactive-bg); color: var(--btn-inactive-text);
+    outline: 1px solid var(--btn-inactive-border);
+  }
+  .btn-toggle.on { background: var(--btn-active-bg); color: var(--btn-active-text); outline: none; }
+
+  .btn-settings {
+    border: 1px solid var(--gold-border); background: transparent;
+    color: var(--gold); border-radius: 4px; padding: 5px 12px; cursor: pointer;
+    font-size: 13px; transition: all 0.2s;
+  }
+  .btn-settings.open { background: var(--gold-faint); }
+
+  .btn-nav {
+    width: 32px; height: 36px; border: none; background: transparent;
+    color: var(--gold); font-size: 15px; cursor: pointer;
+    opacity: 0.75; transition: opacity 0.15s; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-nav:disabled { color: var(--muted); opacity: 0.3; cursor: not-allowed; }
+  .btn-nav:not(:disabled):hover { opacity: 1; }
+
+  .btn-read {
+    border: none; font-weight: bold; font-size: 12px; padding: 6px 14px; border-radius: 4px;
+    letter-spacing: 0.4px; cursor: not-allowed; transition: all 0.2s;
+    background: var(--gold-faint); color: var(--muted);
+  }
+  .btn-read.ready { background: var(--btn-active-bg); color: var(--btn-active-text); cursor: pointer; }
+
+  .btn-load-xml {
+    border: 1px solid var(--gold-border); background: var(--btn-active-bg);
+    color: var(--btn-active-text); border-radius: 4px; padding: 5px 10px;
+    cursor: pointer; font-size: 11px; font-weight: bold; transition: all 0.2s;
+  }
+  .btn-load-xml.loaded { background: var(--gold-faint); color: var(--gold); }
+  .btn-load-xml.right-loaded { background: rgba(138,180,201,0.08); color: var(--right-color); border-color: rgba(138,180,201,0.3); }
+
+  /* ── Selects ── */
+  select {
+    background: var(--sel-bg); border: 1px solid var(--gold-border);
+    color: var(--sel-text); font-family: Georgia, serif; font-size: 13px;
+    padding: 5px 9px; border-radius: 4px; outline: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Range slider ── */
+  .slider-wrap { display: flex; flex-direction: column; gap: 2px; }
+  input[type=range] {
+    cursor: pointer; height: 4px; outline: none;
+    -webkit-appearance: none; appearance: none; border-radius: 4px; border: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+    background: radial-gradient(circle,#e8d070,#c9a84c);
+    box-shadow: 0 0 6px rgba(201,168,76,0.5); cursor: pointer; border: none;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; background: #c9a84c; cursor: pointer; border: none;
+  }
+  .slider-ticks { display: flex; justify-content: space-between; }
+  .slider-tick { width: 1.5px; border-radius: 1px; transition: height 0.1s; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--spin-border); border-top-color: var(--gold);
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ── Blink ── */
+  .blink-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); display: inline-block; animation: blink 0.9s infinite; }
+  .blink-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
+
+  /* ── Modal ── */
+  #modal-overlay {
+    position: fixed; inset: 0; z-index: 1000; background: var(--overlay);
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  #modal-overlay.open { display: flex; }
+  #modal {
+    background: var(--modal-bg); border: 1px solid var(--modal-border);
+    border-radius: 10px; padding: 28px 32px; width: 500px; max-width: 95vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  #modal-header { display: flex; align-items: center; justify-content: space-between; }
+  #modal-subtitle { font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); opacity: 0.7; margin-bottom: 4px; }
+  #modal-title { font-size: 16px; font-weight: bold; color: var(--verse); }
+  #modal-close {
+    background: transparent; border: 1px solid var(--gold-border);
+    color: var(--muted); border-radius: 4px; width: 28px; height: 28px;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+
+  .modal-methods { display: flex; gap: 8px; }
+  .modal-method-btn {
+    flex: 1; padding: 10px 0; border: 1px solid var(--gold-border);
+    border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; letter-spacing: 0.5px;
+    background: transparent; color: var(--muted); transition: all 0.2s;
+  }
+  .modal-method-btn.active { background: var(--gold-faint); color: var(--gold); border-color: var(--gold); }
+
+  .drop-zone {
+    border: 2px dashed var(--gold-border); border-radius: 8px; padding: 32px 24px;
+    background: var(--drop-zone);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--gold); background: var(--drop-zone-active); }
+  .drop-zone-icon { font-size: 28px; opacity: 0.5; }
+  .drop-zone-text { color: var(--muted); font-size: 13px; font-style: italic; }
+  .drop-zone-hint { font-size: 10px; color: var(--gold); opacity: 0.6; letter-spacing: 1px; }
+
+  #paste-area {
+    width: 100%; resize: vertical; border-radius: 6px;
+    background: var(--input-bg); border: 1px solid var(--gold-border);
+    color: var(--sel-text); font-family: Menlo, monospace; font-size: 11px;
+    padding: 10px 12px; outline: none; min-height: 140px; line-height: 1.5;
+  }
+
+  .btn-parse {
+    width: 100%; border: none; font-weight: bold; font-size: 13px; padding: 10px 0;
+    border-radius: 6px; cursor: not-allowed; letter-spacing: 0.5px; transition: all 0.2s;
+    background: var(--gold-faint); color: var(--muted);
+  }
+  .btn-parse.ready { background: var(--btn-active-bg); color: var(--btn-active-text); cursor: pointer; }
+
+  #modal-empty { text-align: center; color: var(--muted); font-size: 12px; font-style: italic; padding: 12px 0; opacity: 0.7; }
+
+  #modal-error {
+    background: rgba(224,112,96,0.1); border: 1px solid rgba(224,112,96,0.3);
+    border-radius: 6px; padding: 10px 14px; color: #e07060; font-size: 12px; font-family: Menlo,monospace; display: none;
+  }
+  #modal-error.visible { display: block; }
+
+  #modal-hint {
+    border-top: 1px solid var(--divider); padding-top: 14px;
+    font-size: 11px; color: var(--muted); font-style: italic; line-height: 1.7;
+  }
+
+  /* ── Splash screen ── */
+  #splash {
+    position: fixed; inset: 0; z-index: 2000;
+    background: #0e0c09;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px; transition: opacity 0.5s ease;
+  }
+  #splash.fade-out { opacity: 0; pointer-events: none; }
+  #splash.hidden { display: none; }
+  .splash-cross { font-size: 36px; animation: pulse 2s ease-in-out infinite; }
+  .splash-title { font-size: 22px; font-weight: bold; color: #c9a84c; letter-spacing: 2px; font-style: italic; }
+  .splash-progress-wrap { width: 280px; display: flex; flex-direction: column; gap: 10px; }
+  .splash-row { display: flex; align-items: center; gap: 10px; }
+  .splash-dot { width: 8px; height: 8px; border-radius: 50%; background: #2a2416; flex-shrink: 0; transition: background 0.3s; }
+  .splash-dot.done { background: #c9a84c; }
+  .splash-dot.loading { background: #c9a84c; animation: blink 0.8s infinite; }
+  .splash-dot.error { background: #e07060; }
+  .splash-lbl { font-size: 12px; color: #8a7d60; font-style: italic; flex: 1; }
+  .splash-lbl.done { color: #c9a84c; }
+  .splash-lbl.error { color: #e07060; }
+  .splash-bar-track { width: 280px; height: 3px; background: #1a1710; border-radius: 2px; overflow: hidden; }
+  .splash-bar-fill { height: 100%; background: linear-gradient(90deg,#7a5a1a,#c9a84c); border-radius: 2px; width: 0%; transition: width 0.4s ease; }
+  .splash-sub { font-size: 10px; color: #8a7d60; letter-spacing: 2px; text-transform: uppercase; opacity: 0.6; }
+  .splash-skip {
+    font-size: 11px; color: #8a7d60; border: 1px solid rgba(201,168,76,0.2);
+    background: transparent; border-radius: 4px; padding: 5px 14px; cursor: pointer;
+    font-family: Georgia, serif; letter-spacing: 0.5px; transition: all 0.2s; margin-top: 4px;
+  }
+  .splash-skip:hover { color: #c9a84c; border-color: rgba(201,168,76,0.5); }
+  @keyframes pulse { 0%,100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
+
+  /* ── Animations ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.15; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.45); }
+</style>
+</head>
+<body>
+
+<!-- Splash / loading screen -->
+<div id="splash">
+  <div class="splash-cross">✝</div>
+  <div class="splash-title">Bible Reader</div>
+  <div class="splash-progress-wrap">
+    <div class="splash-row">
+      <div class="splash-dot" id="dot-left"></div>
+      <div class="splash-lbl" id="lbl-left">Telugu Bible (BSI)</div>
+    </div>
+    <div class="splash-row">
+      <div class="splash-dot" id="dot-right"></div>
+      <div class="splash-lbl" id="lbl-right">New International Version (UK)</div>
+    </div>
+  </div>
+  <div class="splash-bar-track"><div class="splash-bar-fill" id="splash-bar"></div></div>
+  <div class="splash-sub" id="splash-sub">Fetching from GitHub…</div>
+  <button class="splash-skip" id="splash-skip" onclick="skipSplash()" style="display:none">Skip — load manually</button>
+</div>
+
+<div id="app">
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button class="btn-round" id="play-btn" title="Auto-scroll">▶</button>
+    <span id="toolbar-title">✝ Bible Reader</span>
+    <span id="toolbar-status">Load XML files to begin</span>
+    <button class="btn-settings" id="ribbon-toggle">☰ ▼</button>
+  </div>
+
+  <!-- Ribbon -->
+  <div id="ribbon">
+    <!-- Row 1: Navigation -->
+    <div id="ribbon-nav">
+      <span class="ribbon-label">Book</span>
+      <select id="sel-book" disabled>
+        <option value="">— Book —</option>
+      </select>
+
+      <span class="ribbon-label">Ch</span>
+      <select id="sel-chap" disabled style="min-width:68px">
+        <option value="">—</option>
+      </select>
+
+      <span class="ribbon-label">Verse</span>
+      <select id="sel-verse" disabled style="min-width:68px">
+        <option value="">—</option>
+      </select>
+
+      <button class="btn-read" id="btn-read">Read ›</button>
+
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn-load-xml" id="btn-load-left" onclick="openModal('left')">+ Left XML</button>
+        <button class="btn-load-xml" id="btn-load-right" onclick="openModal('right')" style="border-color:rgba(138,180,201,0.3);background:var(--btn-active-bg);color:var(--btn-active-text)">+ Right XML</button>
+      </div>
+    </div>
+
+    <!-- Row 2: Settings -->
+    <div id="ribbon-settings">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="ribbon-label">View</span>
+        <button class="btn-toggle on" id="btn-parallel" onclick="setParallel(true)">⊞ Parallel</button>
+        <button class="btn-toggle" id="btn-single" onclick="setParallel(false)">▭ Single</button>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="ribbon-label">Scroll</span>
+        <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
+        <span id="spd-label" style="font-size:9px;color:var(--gold);opacity:0.7;width:36px;text-align:center"></span>
+        <div class="slider-wrap" style="width:100px">
+          <input type="range" id="spd-slider" min="1" max="10" value="2" style="width:100%">
+          <div class="slider-ticks" id="spd-ticks"></div>
+        </div>
+        <span id="spd-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:14px">2</span>
+        <div id="blink-wrap" style="display:none;align-items:center;gap:4px">
+          <span class="blink-dot"></span>
+          <span class="blink-label">scrolling</span>
+        </div>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="ribbon-label">Font</span>
+        <span style="font-size:10px;color:var(--muted)">A</span>
+        <div class="slider-wrap" style="width:90px">
+          <input type="range" id="font-slider" min="10" max="28" value="15" style="width:100%">
+          <div class="slider-ticks" id="font-ticks"></div>
+        </div>
+        <span style="font-size:14px;color:var(--gold)">A</span>
+        <span id="font-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:18px">15</span>
+      </div>
+      <div class="ribbon-divider"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="ribbon-label">Theme</span>
+        <button class="btn-toggle on" id="btn-dark" onclick="setTheme(true)">🌙 Dark</button>
+        <button class="btn-toggle" id="btn-light" onclick="setTheme(false)">☀️ Bright</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info bar -->
+  <div id="infobar">
+    <div style="display:flex;align-items:center;flex-shrink:0">
+      <button class="btn-nav" id="nav-prev-book" onclick="goPrevBook()" disabled>«</button>
+      <button class="btn-nav" id="nav-prev-chap" onclick="goPrevChap()" disabled>‹</button>
+    </div>
+    <div id="infobar-left" onclick="openModal('left')" title="Click to load Left XML">
+      <span id="left-label">— Load Left XML —</span>
+    </div>
+    <div style="position:relative;flex-shrink:0">
+      <button id="chap-btn" onclick="toggleChapDrop()">Ch. —</button>
+      <div id="chap-dropdown"></div>
+    </div>
+    <div id="infobar-right" onclick="openModal('right')" title="Click to load Right XML">
+      <span id="right-label">— Load Right XML —</span>
+    </div>
+    <div style="display:flex;align-items:center;flex-shrink:0">
+      <button class="btn-nav" id="nav-next-chap" onclick="goNextChap()" disabled>›</button>
+      <button class="btn-nav" id="nav-next-book" onclick="goNextBook()" disabled>»</button>
+    </div>
+  </div>
+
+  <!-- Single-view tabs -->
+  <div id="single-tabs">
+    <button id="tab-left" class="active-left" onclick="setActiveSide('left')">Left Bible</button>
+    <button id="tab-right" onclick="setActiveSide('right')">Right Bible</button>
+  </div>
+
+  <!-- Panels -->
+  <div id="panels">
+    <div class="panel" id="panel-left">
+      <div class="panel-head">
+        <div class="panel-accent"></div>
+        <span id="panel-left-label" style="opacity:0.6">Left Bible</span>
+        <button class="panel-load-btn" onclick="openModal('left')">⇪ Load</button>
+      </div>
+      <div class="panel-body" id="body-left">
+        <div class="empty-state">
+          <div class="empty-icon">📖</div>
+          <div class="empty-text">No Bible loaded for this panel</div>
+          <button class="empty-load-btn" onclick="openModal('left')">+ Load XML</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel" id="panel-right">
+      <div class="panel-head right">
+        <div class="panel-accent right"></div>
+        <span id="panel-right-label" style="opacity:0.6">Right Bible</span>
+        <button class="panel-load-btn" onclick="openModal('right')">⇪ Load</button>
+      </div>
+      <div class="panel-body" id="body-right">
+        <div class="empty-state">
+          <div class="empty-icon">✝</div>
+          <div class="empty-text">No Bible loaded for this panel</div>
+          <button class="empty-load-btn right" onclick="openModal('right')">+ Load XML</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div id="modal">
+    <div id="modal-header">
+      <div>
+        <div id="modal-subtitle">Load Bible XML</div>
+        <div id="modal-title">Left Panel</div>
+      </div>
+      <button id="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-methods">
+      <button class="modal-method-btn" id="method-file" onclick="setMethod('file')">📂 Upload File</button>
+      <button class="modal-method-btn" id="method-paste" onclick="setMethod('paste')">📋 Paste XML</button>
+    </div>
+
+    <div id="method-file-content" style="display:none">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
+        <div class="drop-zone-icon">📖</div>
+        <div class="drop-zone-text">Drop an XML Bible file here<br><span style="font-size:11px;opacity:0.7">or click to browse</span></div>
+        <div class="drop-zone-hint">Supports Zefania, OSIS, and simple XML formats</div>
+      </div>
+      <input type="file" id="file-input" accept=".xml" style="display:none" onchange="onFileChange(event)">
+    </div>
+
+    <div id="method-paste-content" style="display:none;flex-direction:column;gap:10px">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);opacity:0.7">Paste XML Content</div>
+      <textarea id="paste-area" rows="8" placeholder="Paste your Bible XML here…" oninput="onPasteInput()"></textarea>
+      <button class="btn-parse" id="btn-parse" onclick="parsePaste()">Parse &amp; Load</button>
+    </div>
+
+    <div id="modal-empty">Choose how you'd like to load your Bible XML</div>
+
+    <div id="modal-error"></div>
+
+    <div id="modal-hint">
+      <strong style="color:var(--gold);font-style:normal">Supported formats:</strong>
+      Zefania XML (BIBLEBOOK/CHAPTER/VERS), OSIS (div[type=book]/chapter/verse),
+      and simple numbered book/chapter/verse elements.
+      Download free Bible XMLs from <span style="color:var(--gold)">github.com/sajeevavahini/bibles</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const state = {
+  leftData: null, rightData: null,
+  leftLabel: '', rightLabel: '',
+  book: '', chap: '', verse: '',
+  verses: null,      // { left: {}, right: {}, nums: [] }
+  autoOn: false, speed: 2, fontSize: 15,
+  parallel: true, activeSide: 'left',
+  dark: true, ribbonOpen: true,
+  modalSide: null, modalMethod: null,
+  chapDropOpen: false,
+};
+
+const BOOK_NAMES = {1:"Genesis",2:"Exodus",3:"Leviticus",4:"Numbers",5:"Deuteronomy",6:"Joshua",7:"Judges",8:"Ruth",9:"1 Samuel",10:"2 Samuel",11:"1 Kings",12:"2 Kings",13:"1 Chronicles",14:"2 Chronicles",15:"Ezra",16:"Nehemiah",17:"Esther",18:"Job",19:"Psalms",20:"Proverbs",21:"Ecclesiastes",22:"Song of Solomon",23:"Isaiah",24:"Jeremiah",25:"Lamentations",26:"Ezekiel",27:"Daniel",28:"Hosea",29:"Joel",30:"Amos",31:"Obadiah",32:"Jonah",33:"Micah",34:"Nahum",35:"Habakkuk",36:"Zephaniah",37:"Haggai",38:"Zechariah",39:"Malachi",40:"Matthew",41:"Mark",42:"Luke",43:"John",44:"Acts",45:"Romans",46:"1 Corinthians",47:"2 Corinthians",48:"Galatians",49:"Ephesians",50:"Philippians",51:"Colossians",52:"1 Thessalonians",53:"2 Thessalonians",54:"1 Timothy",55:"2 Timothy",56:"Titus",57:"Philemon",58:"Hebrews",59:"James",60:"1 Peter",61:"2 Peter",62:"1 John",63:"2 John",64:"3 John",65:"Jude",66:"Revelation"};
+const SPD = ['','Slow','','','Medium','','','Fast','','','Turbo'];
+
+// ── XML Parser ────────────────────────────────────────────────────────────────
+function parseXML(text) {
+  const doc = new DOMParser().parseFromString(text, 'text/xml');
+  const books = {};
+
+  const zBooks = doc.querySelectorAll('BIBLEBOOK');
+  if (zBooks.length > 0) {
+    zBooks.forEach(b => {
+      const name = b.getAttribute('bname') || b.getAttribute('bsname') || b.getAttribute('n') || '?';
+      books[name] = {};
+      b.querySelectorAll('CHAPTER').forEach(ch => {
+        const cn = ch.getAttribute('cnumber') || ch.getAttribute('n');
+        if (!cn) return;
+        books[name][cn] = {};
+        ch.querySelectorAll('VERS').forEach(v => {
+          const vn = v.getAttribute('vnumber') || v.getAttribute('n');
+          if (vn) books[name][cn][vn] = v.textContent?.trim() ?? '';
+        });
+      });
+    });
+    return books;
+  }
+
+  const bibleEl = doc.querySelector('bible');
+  if (bibleEl) {
+    bibleEl.querySelectorAll('book').forEach(b => {
+      const num = parseInt(b.getAttribute('number') ?? '0', 10);
+      const name = b.getAttribute('name') || BOOK_NAMES[num] || `Book ${num}`;
+      books[name] = {};
+      b.querySelectorAll('chapter').forEach(ch => {
+        const cn = ch.getAttribute('number');
+        if (!cn) return;
+        books[name][cn] = {};
+        ch.querySelectorAll('verse').forEach(v => {
+          const vn = v.getAttribute('number');
+          if (vn) books[name][cn][vn] = v.textContent?.trim() ?? '';
+        });
+      });
+    });
+    if (Object.keys(books).length > 0) return books;
+  }
+
+  doc.querySelectorAll("div[type='book']").forEach(b => {
+    const name = b.getAttribute('osisID') || '?';
+    books[name] = {};
+    b.querySelectorAll('chapter').forEach(ch => {
+      const cn = ch.getAttribute('osisID')?.split('.')[1];
+      if (!cn) return;
+      books[name][cn] = {};
+      ch.querySelectorAll('verse').forEach(v => {
+        const vn = v.getAttribute('osisID')?.split('.')[2];
+        if (vn) books[name][cn][vn] = v.textContent?.trim() ?? '';
+      });
+    });
+  });
+  return books;
+}
+
+function loadXMLText(text) {
+  const data = parseXML(text);
+  if (Object.keys(data).length === 0) throw new Error('No books parsed — check XML format');
+  return data;
+}
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const bodyLeft = () => $('body-left');
+const bodyRight = () => $('body-right');
+
+// ── Scroll sync ───────────────────────────────────────────────────────────────
+let syncing = false;
+$('body-left').addEventListener('scroll', () => {
+  if (state.autoOn || syncing) return;
+  const el = $('body-left'), r = $('body-right');
+  syncing = true;
+  const pct = el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight);
+  r.scrollTop = pct * Math.max(1, r.scrollHeight - r.clientHeight);
+  requestAnimationFrame(() => { syncing = false; });
+});
+$('body-right').addEventListener('scroll', () => {
+  if (state.autoOn || syncing) return;
+  const el = $('body-right'), l = $('body-left');
+  syncing = true;
+  const pct = el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight);
+  l.scrollTop = pct * Math.max(1, l.scrollHeight - l.clientHeight);
+  requestAnimationFrame(() => { syncing = false; });
+});
+
+// ── Auto-scroll ───────────────────────────────────────────────────────────────
+let rafId = null, lastTs = null;
+function autoLoop(ts) {
+  rafId = requestAnimationFrame(autoLoop);
+  if (!state.autoOn) { lastTs = null; return; }
+  const el = $('body-left');
+  if (!el) { lastTs = null; return; }
+  if (lastTs !== null) {
+    const px = (ts - lastTs) * state.speed * 0.03;
+    el.scrollTop += px;
+    $('body-right').scrollTop = el.scrollTop;
+    if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
+      setAuto(false); lastTs = null; return;
+    }
+  }
+  lastTs = ts;
+}
+rafId = requestAnimationFrame(autoLoop);
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function setTheme(dark) {
+  state.dark = dark;
+  document.body.classList.toggle('light', !dark);
+  $('btn-dark').classList.toggle('on', dark);
+  $('btn-light').classList.toggle('on', !dark);
+  updateSliders();
+}
+
+// ── Ribbon ───────────────────────────────────────────────────────────────────
+$('ribbon-toggle').addEventListener('click', () => {
+  state.ribbonOpen = !state.ribbonOpen;
+  $('ribbon').style.display = state.ribbonOpen ? '' : 'none';
+  $('ribbon-toggle').textContent = '☰ ' + (state.ribbonOpen ? '▲' : '▼');
+  $('ribbon-toggle').classList.toggle('open', state.ribbonOpen);
+});
+
+// ── Parallel / Single ─────────────────────────────────────────────────────────
+function setParallel(p) {
+  state.parallel = p;
+  $('btn-parallel').classList.toggle('on', p);
+  $('btn-single').classList.toggle('on', !p);
+  $('panels').classList.toggle('single', !p);
+  $('panel-right').style.display = (!p && state.activeSide === 'left') ? 'none' : '';
+  $('panel-left').style.display  = (!p && state.activeSide === 'right') ? 'none' : '';
+  if (state.verses) {
+    $('single-tabs').classList.toggle('visible', !p);
+  }
+}
+
+function setActiveSide(side) {
+  state.activeSide = side;
+  $('tab-left').className = side === 'left' ? 'active-left' : '';
+  $('tab-right').className = side === 'right' ? 'active-right' : '';
+  if (!state.parallel) {
+    $('panel-left').style.display  = side === 'left'  ? '' : 'none';
+    $('panel-right').style.display = side === 'right' ? '' : 'none';
+  }
+}
+
+// ── Navigation helpers ────────────────────────────────────────────────────────
+function getBooks() { return state.leftData ? Object.keys(state.leftData) : []; }
+function getRightBooks() { return state.rightData ? Object.keys(state.rightData) : []; }
+function getChapters() {
+  if (!state.book || !state.leftData?.[state.book]) return [];
+  return Object.keys(state.leftData[state.book]).sort((a,b) => +a - +b);
+}
+
+function goPrevBook() {
+  const books = getBooks(), idx = books.indexOf(state.book);
+  if (idx <= 0) return;
+  const nb = books[idx - 1];
+  const chaps = Object.keys(state.leftData[nb] || {}).sort((a,b) => +a - +b);
+  selectBook(nb); selectChap(chaps[0] || ''); readChap();
+}
+function goNextBook() {
+  const books = getBooks(), idx = books.indexOf(state.book);
+  if (idx < 0 || idx >= books.length - 1) return;
+  const nb = books[idx + 1];
+  const chaps = Object.keys(state.leftData[nb] || {}).sort((a,b) => +a - +b);
+  selectBook(nb); selectChap(chaps[0] || ''); readChap();
+}
+function goPrevChap() {
+  const chaps = getChapters(), idx = chaps.indexOf(state.chap);
+  if (idx > 0) { selectChap(chaps[idx-1]); readChap(); }
+  else { const books = getBooks(), bi = books.indexOf(state.book); if (bi > 0) { const pb = books[bi-1]; const pc = Object.keys(state.leftData[pb]||{}).sort((a,b)=>+a-+b); selectBook(pb); selectChap(pc[pc.length-1]||''); readChap(); } }
+}
+function goNextChap() {
+  const chaps = getChapters(), idx = chaps.indexOf(state.chap);
+  if (idx < chaps.length - 1) { selectChap(chaps[idx+1]); readChap(); }
+  else goNextBook();
+}
+
+// ── Book/Chap selects ─────────────────────────────────────────────────────────
+function selectBook(val) {
+  state.book = val; $('sel-book').value = val;
+  state.chap = ''; state.verse = ''; state.verses = null;
+  populateChaps(); populateVerses(); updateNavBtns();
+}
+function selectChap(val) {
+  state.chap = val; $('sel-chap').value = val;
+  state.verse = ''; state.verses = null;
+  updateChapBtn(); populateVerses(); updateNavBtns();
+}
+
+function populateBooks() {
+  const sel = $('sel-book');
+  sel.innerHTML = '<option value="">— Book —</option>';
+  const books = getBooks(), rBooks = getRightBooks();
+  books.forEach((b, i) => {
+    const r = rBooks[i];
+    const lbl = r && r !== b ? `${i+1}).   ${b} — ${r}` : `${i+1}).   ${b}`;
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = lbl;
+    sel.appendChild(opt);
+  });
+  sel.disabled = books.length === 0;
+}
+function populateChaps() {
+  const sel = $('sel-chap');
+  sel.innerHTML = '<option value="">—</option>';
+  const chaps = getChapters();
+  chaps.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+  sel.disabled = chaps.length === 0;
+
+  // chapter dropdown
+  const dd = $('chap-dropdown');
+  dd.innerHTML = '';
+  chaps.forEach(c => {
+    const btn = document.createElement('button');
+    btn.textContent = c;
+    if (c === state.chap) btn.classList.add('active');
+    btn.onclick = () => { selectChap(c); readChap(); closeChapDrop(); };
+    dd.appendChild(btn);
+  });
+}
+function populateVerses() {
+  const sel = $('sel-verse');
+  sel.innerHTML = '<option value="">—</option>';
+  if (!state.verses) { sel.disabled = true; return; }
+  state.verses.nums.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+}
+
+$('sel-book').addEventListener('change', e => { selectBook(e.target.value); setAuto(false); });
+$('sel-chap').addEventListener('change', e => { selectChap(e.target.value); setAuto(false); });
+$('sel-verse').addEventListener('change', e => scrollToVerse(e.target.value));
+
+// ── Read ──────────────────────────────────────────────────────────────────────
+function readChap() {
+  if (!state.book || !state.chap || !state.leftData || !state.rightData) return;
+  const tV = state.leftData[state.book]?.[state.chap] || {};
+  const books = getBooks(), rBooks = getRightBooks();
+  const bIdx = books.indexOf(state.book);
+  const rKey = (bIdx >= 0 ? rBooks[bIdx] : '') || state.book;
+  const nV = state.rightData[rKey]?.[state.chap] || {};
+  const nums = [...new Set([...Object.keys(tV), ...Object.keys(nV)])].sort((a,b) => +a - +b);
+  state.verses = { left: tV, right: nV, nums };
+  state.verse = ''; setAuto(false); closeChapDrop();
+  renderVerses();
+  updateRead();
+  populateVerses();
+  updateChapBtn();
+  if (!state.parallel && state.verses) $('single-tabs').classList.add('visible');
+  $('sel-chap').value = state.chap;
+  // update chap dropdown active
+  $('chap-dropdown').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.textContent === state.chap));
+  setTimeout(() => { $('body-left').scrollTop = 0; $('body-right').scrollTop = 0; }, 60);
+}
+
+$('btn-read').addEventListener('click', () => {
+  if (state.book && state.chap && state.leftData && state.rightData) readChap();
+});
+
+function renderVerses() {
+  renderPanel('body-left', 'left');
+  renderPanel('body-right', 'right');
+  updatePanelLabels();
+}
+
+function renderPanel(id, side) {
+  const el = $(id);
+  if (!state.verses) return;
+  el.innerHTML = '';
+  state.verses.nums.forEach((n, i) => {
+    const text = (side === 'left' ? state.verses.left[n] : state.verses.right[n]) || '—';
+    const row = document.createElement('div');
+    row.className = 'verse-row';
+    row.dataset.vnum = n;
+    row.style.animationDelay = `${i * 10}ms`;
+    row.style.fontSize = state.fontSize + 'px';
+    row.innerHTML = `
+      <div class="verse-num" style="font-size:${Math.max(9, state.fontSize - 4)}px">${n}</div>
+      <div class="verse-text" style="font-size:${state.fontSize}px">${text}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function scrollToVerse(vn) {
+  state.verse = vn;
+  if (!vn) return;
+  ['body-left','body-right'].forEach(id => {
+    const el = $(id);
+    const t = el.querySelector(`[data-vnum="${vn}"]`);
+    if (t) el.scrollTop = t.offsetTop - 16;
+    el.querySelectorAll('.verse-row').forEach(r => r.classList.toggle('highlighted', r.dataset.vnum === vn));
+  });
+}
+
+// ── Update UI helpers ─────────────────────────────────────────────────────────
+function updateRead() {
+  const ready = !!(state.book && state.chap && state.leftData && state.rightData);
+  $('btn-read').classList.toggle('ready', ready);
+}
+function updateNavBtns() {
+  const books = getBooks(), idx = books.indexOf(state.book);
+  $('nav-prev-book').disabled = idx <= 0;
+  $('nav-next-book').disabled = idx < 0 || idx >= books.length - 1;
+  $('nav-prev-chap').disabled = !state.chap;
+  $('nav-next-chap').disabled = !state.chap;
+}
+function updateChapBtn() {
+  const btn = $('chap-btn');
+  btn.textContent = state.chap ? `Ch. ${state.chap} ▾` : 'Ch. — ▾';
+  btn.classList.toggle('active', !!state.chap);
+}
+function updatePanelLabels() {
+  const books = getBooks(), rBooks = getRightBooks(), bIdx = books.indexOf(state.book);
+  const rBook = bIdx >= 0 ? (rBooks[bIdx] || state.book) : '';
+  $('panel-left-label').textContent = state.book || (state.leftData ? 'Left Bible' : '');
+  $('panel-left-label').style.opacity = state.book ? '1' : '0.6';
+  $('panel-right-label').textContent = rBook || (state.rightData ? 'Right Bible' : '');
+  $('panel-right-label').style.opacity = rBook ? '1' : '0.6';
+}
+
+function updateStatus() {
+  const l = state.leftData ? Object.keys(state.leftData).length : 0;
+  const r = state.rightData ? Object.keys(state.rightData).length : 0;
+  if (!state.leftData && !state.rightData) { $('toolbar-status').textContent = 'Load XML files to begin'; return; }
+  $('toolbar-status').textContent = `${l} / ${r} books`;
+}
+
+function updateLoadBtns() {
+  const bl = $('btn-load-left'), br = $('btn-load-right');
+  if (state.leftData) { bl.textContent = '⇪ Left'; bl.classList.add('loaded'); }
+  else { bl.textContent = '+ Left XML'; bl.classList.remove('loaded'); }
+  if (state.rightData) {
+    br.textContent = '⇪ Right';
+    br.style.cssText = 'border-color:rgba(138,180,201,0.3);background:rgba(138,180,201,0.08);color:var(--right-color)';
+  } else {
+    br.textContent = '+ Right XML';
+    br.style.cssText = 'border-color:rgba(138,180,201,0.3);background:var(--btn-active-bg);color:var(--btn-active-text)';
+  }
+}
+
+function updateEmptyPanels() {
+  if (!state.verses) {
+    ['body-left','body-right'].forEach((id, i) => {
+      const side = i === 0 ? 'left' : 'right';
+      const data = i === 0 ? state.leftData : state.rightData;
+      const el = $(id);
+      el.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      if (!data) {
+        empty.innerHTML = `<div class="empty-icon">${side === 'left' ? '📖' : '✝'}</div><div class="empty-text">No Bible loaded for this panel</div><button class="empty-load-btn${side === 'right' ? ' right' : ''}" onclick="openModal('${side}')">+ Load XML</button>`;
+      } else {
+        empty.innerHTML = `<div class="empty-icon">${side === 'left' ? '📖' : '✝'}</div><div class="empty-text">${state.leftData && state.rightData ? 'Select a book & chapter above' : 'Load both panels to begin'}</div>`;
+      }
+      el.appendChild(empty);
+    });
+  }
+}
+
+// ── Auto-scroll ───────────────────────────────────────────────────────────────
+function setAuto(on) {
+  state.autoOn = on && !!state.verses;
+  [$('play-btn'), $('play-btn-2')].forEach(btn => {
+    btn.textContent = state.autoOn ? '⏸' : '▶';
+    btn.classList.toggle('active-play', state.autoOn);
+    btn.classList.toggle('ready', !!state.verses && !state.autoOn);
+  });
+  $('blink-wrap').style.display = state.autoOn ? 'flex' : 'none';
+}
+
+$('play-btn').addEventListener('click', () => setAuto(!state.autoOn));
+$('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.autoOn));
+
+// ── Sliders ───────────────────────────────────────────────────────────────────
+function updateSliders() {
+  updateSlider($('spd-slider'), $('spd-ticks'), 10, state.speed, 1, 10);
+  updateSlider($('font-slider'), $('font-ticks'), 10, state.fontSize, 10, 28);
+  $('spd-val').textContent = state.speed;
+  $('font-val').textContent = state.fontSize;
+  $('spd-label').textContent = SPD[state.speed] || '';
+}
+
+function updateSlider(input, ticks, steps, val, min, max) {
+  const fill = ((val - min) / (max - min)) * 100;
+  const gold = state.dark ? '#c9a84c' : '#7a5a1a';
+  const empty = state.dark ? '#252010' : '#d8d0bc';
+  input.style.background = `linear-gradient(to right,${gold} ${fill}%,${empty} ${fill}%)`;
+
+  ticks.innerHTML = '';
+  for (let i = 0; i < steps; i++) {
+    const n = min + Math.round((i/(steps-1)) * (max-min));
+    const active = val >= n, curr = val === n;
+    const div = document.createElement('div');
+    div.className = 'slider-tick';
+    div.style.height = curr ? '7px' : '3px';
+    div.style.background = active ? gold : empty;
+    ticks.appendChild(div);
+  }
+}
+
+$('spd-slider').addEventListener('input', e => { state.speed = +e.target.value; updateSliders(); });
+$('font-slider').addEventListener('input', e => {
+  state.fontSize = +e.target.value; updateSliders();
+  document.querySelectorAll('.verse-text').forEach(el => el.style.fontSize = state.fontSize + 'px');
+  document.querySelectorAll('.verse-num').forEach(el => el.style.fontSize = Math.max(9, state.fontSize - 4) + 'px');
+});
+
+// ── Chapter dropdown ──────────────────────────────────────────────────────────
+function toggleChapDrop() {
+  if (!getChapters().length) return;
+  state.chapDropOpen = !state.chapDropOpen;
+  $('chap-dropdown').classList.toggle('open', state.chapDropOpen);
+}
+function closeChapDrop() {
+  state.chapDropOpen = false;
+  $('chap-dropdown').classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#chap-btn') && !e.target.closest('#chap-dropdown')) closeChapDrop();
+});
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(side) {
+  state.modalSide = side;
+  state.modalMethod = null;
+  $('modal-title').textContent = side === 'left' ? 'Left Panel' : 'Right Panel';
+  $('modal-subtitle').style.color = side === 'left' ? 'var(--gold)' : 'var(--right-color)';
+  $('method-file').classList.remove('active');
+  $('method-paste').classList.remove('active');
+  $('method-file-content').style.display = 'none';
+  $('method-paste-content').style.display = 'none';
+  $('modal-empty').style.display = 'block';
+  $('modal-error').classList.remove('visible');
+  $('paste-area').value = '';
+  $('btn-parse').classList.remove('ready');
+  $('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  $('modal-overlay').classList.remove('open');
+}
+function handleOverlayClick(e) {
+  if (e.target === $('modal-overlay')) closeModal();
+}
+
+function setMethod(m) {
+  state.modalMethod = m;
+  $('method-file').classList.toggle('active', m === 'file');
+  $('method-paste').classList.toggle('active', m === 'paste');
+  $('method-file-content').style.display = m === 'file' ? 'block' : 'none';
+  $('method-paste-content').style.display = m === 'paste' ? 'flex' : 'none';
+  $('modal-empty').style.display = 'none';
+  $('modal-error').classList.remove('visible');
+}
+
+function showModalError(msg) {
+  const el = $('modal-error');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+
+function onLoadSuccess(data, label) {
+  const side = state.modalSide;
+  if (side === 'left') { state.leftData = data; state.leftLabel = label; $('left-label').textContent = label; }
+  else { state.rightData = data; state.rightLabel = label; $('right-label').textContent = label; }
+  // reset reading state
+  state.book = ''; state.chap = ''; state.verse = ''; state.verses = null;
+  setAuto(false);
+  populateBooks(); populateChaps(); populateVerses();
+  updateRead(); updateNavBtns(); updateChapBtn(); updateStatus(); updateLoadBtns(); updateEmptyPanels();
+  $('panel-left-label').textContent = state.leftLabel || 'Left Bible';
+  $('panel-right-label').textContent = state.rightLabel || 'Right Bible';
+  $('tab-left').textContent = state.leftLabel || 'Left Bible';
+  $('tab-right').textContent = state.rightLabel || 'Right Bible';
+  closeModal();
+}
+
+// File upload
+function onDragOver(e) { e.preventDefault(); $('drop-zone').classList.add('drag-over'); }
+function onDragLeave() { $('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) { e.preventDefault(); $('drop-zone').classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }
+function onFileChange(e) { const f = e.target.files[0]; if (f) handleFile(f); }
+
+function handleFile(file) {
+  $('modal-error').classList.remove('visible');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { onLoadSuccess(loadXMLText(e.target.result), file.name.replace(/\.xml$/i, '')); }
+    catch(err) { showModalError(err.message); }
+  };
+  reader.readAsText(file);
+}
+
+// Paste
+function onPasteInput() { $('btn-parse').classList.toggle('ready', $('paste-area').value.trim().length > 0); }
+function parsePaste() {
+  $('modal-error').classList.remove('visible');
+  try { onLoadSuccess(loadXMLText($('paste-area').value.trim()), 'Pasted XML'); }
+  catch(err) { showModalError(err.message); }
+}
+
+// ── Default URLs ──────────────────────────────────────────────────────────────
+const DEFAULT_LEFT_URL  = 'https://raw.githubusercontent.com/sajeevavahini/bibles/refs/heads/main/Telugu%20Bible%20(BSI).xml';
+const DEFAULT_RIGHT_URL = 'https://raw.githubusercontent.com/sajeevavahini/bibles/refs/heads/main/New%20International%20Version%20(UK).xml';
+// ── No proxy needed on GitHub Pages ─────────────────────────────────────────
+// raw.githubusercontent.com sends Access-Control-Allow-Origin: *
+// so direct fetch works when served from any https:// origin.
+
+// ── Splash helpers ────────────────────────────────────────────────────────────
+function setSplashDot(id, status) {
+  const dot = $(id), lbl = $('lbl-' + id.replace('dot-',''));
+  dot.className = 'splash-dot ' + status;
+  lbl.className = 'splash-lbl ' + (status === 'loading' ? '' : status);
+}
+function setSplashBar(pct) { $('splash-bar').style.width = pct + '%'; }
+function setSplashSub(txt) { $('splash-sub').textContent = txt; }
+function hideSplash() {
+  const s = $('splash');
+  s.classList.add('fade-out');
+  setTimeout(() => s.classList.add('hidden'), 520);
+}
+function skipSplash() { hideSplash(); }
+
+async function fetchBibleURL(url, onStatus) {
+  if (onStatus) onStatus('fetching...');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  return loadXMLText(text);
+}
+
+async function autoLoadDefaults() {
+  const skipTimer = setTimeout(() => { $('splash-skip').style.display = ''; }, 6000);
+
+  let leftOk = false, rightOk = false;
+
+  // Load left (Telugu)
+  setSplashDot('dot-left', 'loading');
+  setSplashBar(5);
+  try {
+    const data = await fetchBibleURL(DEFAULT_LEFT_URL, s => setSplashSub('Telugu: ' + s));
+    state.leftData = data;
+    state.leftLabel = 'Telugu Bible (BSI)';
+    setSplashDot('dot-left', 'done');
+    setSplashBar(50);
+    leftOk = true;
+  } catch(e) {
+    setSplashDot('dot-left', 'error');
+    $('lbl-left').textContent = 'Telugu Bible — ' + e.message;
+    setSplashBar(50);
+  }
+
+  // Load right (NIV)
+  setSplashDot('dot-right', 'loading');
+  try {
+    const data = await fetchBibleURL(DEFAULT_RIGHT_URL, s => setSplashSub('NIV: ' + s));
+    state.rightData = data;
+    state.rightLabel = 'NIV (UK)';
+    setSplashDot('dot-right', 'done');
+    setSplashBar(100);
+    rightOk = true;
+  } catch(e) {
+    setSplashDot('dot-right', 'error');
+    $('lbl-right').textContent = 'NIV — ' + e.message;
+    setSplashBar(100);
+  }
+
+  clearTimeout(skipTimer);
+
+  if (!leftOk && !rightOk) {
+    setSplashSub('Network unavailable — load files manually');
+    $('splash-skip').style.display = '';
+    $('splash-skip').textContent = 'Load manually →';
+    return;
+  }
+
+  setSplashSub('Ready ✓');
+
+  if (leftOk) { $('left-label').textContent = state.leftLabel; $('panel-left-label').textContent = state.leftLabel; $('tab-left').textContent = state.leftLabel; }
+  if (rightOk) { $('right-label').textContent = state.rightLabel; $('panel-right-label').textContent = state.rightLabel; $('tab-right').textContent = state.rightLabel; }
+  populateBooks(); populateChaps(); populateVerses();
+  updateRead(); updateNavBtns(); updateChapBtn(); updateStatus(); updateLoadBtns(); updateEmptyPanels();
+
+  await new Promise(r => setTimeout(r, 500));
+  hideSplash();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+updateSliders();
+updateEmptyPanels();
+updateChapBtn();
+autoLoadDefaults();
+</script>
+</body>
+</html>
