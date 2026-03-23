@@ -86,14 +86,22 @@
 
   #chap-btn {
     background: transparent; border: none; cursor: pointer;
-    border-left: 1px solid var(--bar-border); border-right: 1px solid var(--bar-border);
-    padding: 0 18px; height: 36px; display: flex; align-items: center; gap: 5px;
+    border-left: 1px solid var(--bar-border);
+    padding: 0 14px; height: 36px; display: flex; align-items: center; gap: 5px;
     color: var(--muted); font-family: Georgia, serif;
     font-size: 12px; letter-spacing: 1px; font-weight: bold; transition: background 0.15s;
     flex-shrink: 0;
   }
   #chap-btn.active { color: var(--gold); }
   #chap-btn:hover { background: var(--gold-faint); }
+  /* Play button fused to chapter button */
+  #infobar #play-btn {
+    border-left: 1px solid var(--bar-border) !important;
+    border-right: 1px solid var(--bar-border) !important;
+    border-top: none !important; border-bottom: none !important;
+    border-radius: 0 !important; height: 36px !important;
+    width: 34px !important; margin-left: 0 !important;
+  }
   #chap-dropdown {
     position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
     background: var(--bar); border: 1px solid var(--gold-border);
@@ -413,7 +421,6 @@
 
   <!-- Toolbar -->
   <div id="toolbar">
-    <button class="btn-round" id="play-btn" title="Auto-scroll">▶</button>
     <span id="toolbar-title">✝ Bible Reader</span>
     <span id="toolbar-status">Load XML files to begin</span>
     <button class="btn-settings" id="ribbon-toggle">☰ ▼</button>
@@ -497,8 +504,9 @@
     <div id="infobar-left" onclick="openModal('left')" title="Click to load Left XML">
       <span id="left-label">— Load Left XML —</span>
     </div>
-    <div style="position:relative;flex-shrink:0">
+    <div style="position:relative;flex-shrink:0;display:flex;align-items:center;gap:0">
       <button id="chap-btn" onclick="toggleChapDrop()">Ch. —</button>
+      <button class="btn-round" id="play-btn" title="Auto-scroll" style="width:28px;height:28px;border-left:none;border-radius:0 4px 4px 0;margin-left:-1px">▶</button>
       <div id="chap-dropdown"></div>
     </div>
     <div id="infobar-right" onclick="openModal('right')" title="Click to load Right XML">
@@ -1086,10 +1094,16 @@ function updateChapBtn() {
 function updatePanelLabels() {
   const books = getBooks(), rBooks = getRightBooks(), bIdx = books.indexOf(state.book);
   const rBook = bIdx >= 0 ? (rBooks[bIdx] || state.book) : '';
+
+  // Panel headers show the book name in the XML (e.g. "Genesis")
   $('panel-left-label').textContent = state.book || (state.leftData ? 'Left Bible' : '');
   $('panel-left-label').style.opacity = state.book ? '1' : '0.6';
   $('panel-right-label').textContent = rBook || (state.rightData ? 'Right Bible' : '');
   $('panel-right-label').style.opacity = rBook ? '1' : '0.6';
+
+  // Infobar centre labels show book name — fall back to Bible name if no chapter loaded
+  $('left-label').textContent  = state.book || state.leftLabel  || '— Load Left XML —';
+  $('right-label').textContent = rBook       || state.rightLabel || '— Load Right XML —';
 }
 
 function updateStatus() {
