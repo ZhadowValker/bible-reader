@@ -1095,11 +1095,11 @@ function updatePanelLabels() {
   const books = getBooks(), rBooks = getRightBooks(), bIdx = books.indexOf(state.book);
   const rBook = bIdx >= 0 ? (rBooks[bIdx] || state.book) : '';
 
-  // Panel headers show the book name in the XML (e.g. "Genesis")
-  $('panel-left-label').textContent = state.book || (state.leftData ? 'Left Bible' : '');
-  $('panel-left-label').style.opacity = state.book ? '1' : '0.6';
-  $('panel-right-label').textContent = rBook || (state.rightData ? 'Right Bible' : '');
-  $('panel-right-label').style.opacity = rBook ? '1' : '0.6';
+  // Panel headers show the Bible name (e.g. "Telugu Bible (BSI)")
+  $('panel-left-label').textContent = state.leftLabel || (state.leftData ? 'Left Bible' : '');
+  $('panel-left-label').style.opacity = state.leftLabel ? '1' : '0.6';
+  $('panel-right-label').textContent = state.rightLabel || (state.rightData ? 'Right Bible' : '');
+  $('panel-right-label').style.opacity = state.rightLabel ? '1' : '0.6';
 
   // Infobar centre labels show book name — fall back to Bible name if no chapter loaded
   $('left-label').textContent  = state.book || state.leftLabel  || '— Load Left XML —';
