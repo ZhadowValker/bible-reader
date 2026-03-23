@@ -1185,18 +1185,25 @@ async function autoLoadDefaults() {
 
   // Auto-open Genesis 1:1 if both Bibles loaded
   if (leftOk && rightOk) {
+    // Must populate books first so the select has options
+    populateBooks();
     const firstBook = Object.keys(state.leftData)[0];
     if (firstBook) {
-      selectBook(firstBook);
+      // Set state directly then populate dependents
+      state.book = firstBook;
+      $('sel-book').value = firstBook;
+      populateChaps();
       const firstChap = Object.keys(state.leftData[firstBook]).sort((a,b) => +a - +b)[0];
       if (firstChap) {
-        selectChap(firstChap);
+        state.chap = firstChap;
+        $('sel-chap').value = firstChap;
         readChap();
-        setTimeout(() => scrollToVerse('1'), 200);
       }
     }
   } else {
-    populateChaps(); populateVerses();
+    populateBooks();
+    populateChaps();
+    populateVerses();
   }
 
   updateRead(); updateNavBtns(); updateChapBtn(); updateStatus(); updateLoadBtns();
