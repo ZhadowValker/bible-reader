@@ -77,6 +77,15 @@
     background: var(--panel-head); border-bottom: 1px solid var(--bar-border);
     flex-shrink: 0; min-height: 36px; position: relative;
   }
+  #book-dropdown { position: absolute; top: 100%; }
+  #book-grid button {
+    background: var(--btn-inactive-bg); border: 1px solid var(--gold-border);
+    color: var(--text); font-family: Georgia,serif; font-size: 11px;
+    padding: 5px 8px; border-radius: 4px; cursor: pointer; text-align: left;
+    transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #book-grid button:hover { background: var(--gold-faint); color: var(--gold); }
+  #book-grid button.active { background: var(--btn-active-bg); color: var(--btn-active-text); border-color: transparent; }
   #infobar-left, #infobar-right {
     flex: 1; display: flex; align-items: center; justify-content: center;
     overflow: hidden; padding: 0 6px; cursor: pointer;
@@ -532,7 +541,7 @@
       <button class="btn-nav" id="nav-prev-book" onclick="goPrevBook()" disabled>«</button>
       <button class="btn-nav" id="nav-prev-chap" onclick="goPrevChap()" disabled>‹</button>
     </div>
-    <div id="infobar-left" onclick="openModal('left')" title="Click to load Left XML">
+    <div id="infobar-left" onclick="toggleBookDrop()" title="Select book" style="cursor:pointer">
       <span id="left-label">— Load Left XML —</span>
     </div>
     <div style="position:relative;flex-shrink:0;display:flex;align-items:center;gap:0">
@@ -553,13 +562,24 @@
       <button class="btn-round" id="play-btn" title="Auto-scroll" style="width:28px;height:28px;border-left:none;border-radius:0 4px 4px 0;margin-left:-1px">▶</button>
       <div id="chap-dropdown"></div>
     </div>
-    <div id="infobar-right" onclick="openModal('right')" title="Click to load Right XML">
+    <div id="infobar-right" onclick="toggleBookDrop()" title="Select book" style="cursor:pointer">
       <span id="right-label">— Load Right XML —</span>
     </div>
     <div style="display:flex;align-items:center;flex-shrink:0">
       <button class="btn-nav" id="nav-next-chap" onclick="goNextChap()" disabled>›</button>
       <button class="btn-nav" id="nav-next-book" onclick="goNextBook()" disabled>»</button>
     </div>
+  </div>
+
+  <!-- Book dropdown -->
+  <div id="book-dropdown" style="display:none;position:absolute;left:0;right:0;z-index:300;
+    background:var(--bar);border-bottom:1px solid var(--gold-border);
+    padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,0.5)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);opacity:0.7">Select Book</span>
+      <button onclick="closeBookDrop()" style="background:transparent;border:1px solid var(--gold-border);color:var(--muted);border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">✕</button>
+    </div>
+    <div id="book-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:4px;max-height:300px;overflow-y:auto"></div>
   </div>
 
   <!-- Single-view tabs -->
@@ -1299,6 +1319,54 @@ $('font-slider').addEventListener('input', e => {
 });
 
 // ── Chapter dropdown ──────────────────────────────────────────────────────────
+// ── Book dropdown ────────────────────────────────────────────────────────────
+let bookDropOpen = false;
+
+function toggleBookDrop() {
+  if (!getBooks().length) return;
+  bookDropOpen ? closeBookDrop() : openBookDrop();
+}
+
+function openBookDrop() {
+  bookDropOpen = true;
+  const dd = $('book-dropdown');
+  const grid = $('book-grid');
+  const books = getBooks(), rBooks = getRightBooks();
+
+  grid.innerHTML = '';
+  books.forEach((b, i) => {
+    const r = rBooks[i];
+    const lbl = r && r !== b ? `${b} / ${r}` : b;
+    const btn = document.createElement('button');
+    btn.textContent = lbl;
+    btn.title = lbl;
+    if (b === state.book) btn.classList.add('active');
+    btn.onclick = () => {
+      selectBook(b);
+      // Auto-load first chapter
+      const chaps = Object.keys(state.leftData[b] || {}).sort((a,z) => +a - +z);
+      if (chaps[0]) { selectChap(chaps[0]); readChap(); }
+      closeBookDrop();
+    };
+    grid.appendChild(btn);
+  });
+
+  dd.style.display = 'block';
+}
+
+function closeBookDrop() {
+  bookDropOpen = false;
+  $('book-dropdown').style.display = 'none';
+}
+
+// Close on outside click
+document.addEventListener('click', e => {
+  if (bookDropOpen && !e.target.closest('#book-dropdown') &&
+      !e.target.closest('#infobar-left') && !e.target.closest('#infobar-right')) {
+    closeBookDrop();
+  }
+});
+
 function toggleChapDrop() {
   if (!getChapters().length) return;
   state.chapDropOpen = !state.chapDropOpen;
