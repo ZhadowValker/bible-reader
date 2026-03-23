@@ -377,6 +377,19 @@
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.15; } }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Speed preset buttons ── */
+  .spd-preset {
+    border: 1px solid var(--gold-border); background: var(--btn-inactive-bg);
+    color: var(--btn-inactive-text); border-radius: 4px; padding: 3px 8px;
+    cursor: pointer; font-size: 11px; font-family: Georgia, serif;
+    font-weight: bold; transition: all 0.15s; letter-spacing: 0.3px;
+  }
+  .spd-preset:hover { background: var(--gold-faint); }
+  .spd-preset.active {
+    background: var(--btn-active-bg); color: var(--btn-active-text);
+    border-color: transparent;
+  }
+
   /* ── Verse connector lines ── */
   #verse-lines { overflow: visible; }
   #verse-lines path {
@@ -461,22 +474,24 @@
         <button class="btn-toggle" id="btn-single" onclick="setParallel(false)">▭ Single</button>
       </div>
       <div class="ribbon-divider"></div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="ribbon-label">Scroll</span>
         <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
-        <span id="spd-label" style="font-size:9px;color:var(--gold);opacity:0.7;width:36px;text-align:center"></span>
-        <div class="slider-wrap" style="width:100px">
-          <input type="range" id="spd-slider" min="0" max="10" value="2" style="width:100%">
-          <div class="slider-ticks" id="spd-ticks"></div>
+        <!-- Preset speed buttons: % of panel height per second -->
+        <div style="display:flex;gap:3px" id="preset-btns">
+          <button class="spd-preset" data-pct="0.5"  onclick="setPreset(0.5)">0.5×</button>
+          <button class="spd-preset" data-pct="1"    onclick="setPreset(1)">1×</button>
+          <button class="spd-preset active" data-pct="2" onclick="setPreset(2)">2×</button>
+          <button class="spd-preset" data-pct="5"    onclick="setPreset(5)">5×</button>
+          <button class="spd-preset" data-pct="10"   onclick="setPreset(10)">10×</button>
         </div>
-        <span id="spd-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:28px">2.0</span>
         <div style="width:1px;align-self:stretch;background:var(--divider);margin:0 2px"></div>
         <span class="ribbon-label" style="font-size:7px">FINE</span>
-        <div class="slider-wrap" style="width:70px">
+        <div class="slider-wrap" style="width:80px">
           <input type="range" id="micro-slider" min="0" max="9" value="0" style="width:100%">
           <div class="slider-ticks" id="micro-ticks"></div>
         </div>
-        <span id="micro-val" style="font-size:10px;color:var(--muted);width:28px">2.0</span>
+        <span id="micro-val" style="font-size:10px;color:var(--gold);font-weight:bold;width:28px">+0.0</span>
         <div id="blink-wrap" style="display:none;align-items:center;gap:4px">
           <span class="blink-dot"></span>
           <span class="blink-label">scrolling</span>
@@ -618,7 +633,7 @@ const state = {
   leftLabel: '', rightLabel: '',
   book: '', chap: '', verse: '',
   verses: null,      // { left: {}, right: {}, nums: [] }
-  autoOn: false, speed: 2, microSpeed: 0, fontSize: 15,
+  autoOn: false, speedPct: 2, microSpeed: 0, fontSize: 15,
   parallel: true, activeSide: 'left',
   dark: true, ribbonOpen: true,
   modalSide: null, modalMethod: null,
@@ -821,11 +836,11 @@ function autoLoop(ts) {
   const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
-    const effectiveSpeed = state.speed + state.microSpeed / 10;
-    if (effectiveSpeed === 0) { lastTs = ts; return; }
-    // Exponential curve: slow speeds stay gentle, fast speeds grow quickly.
-    // 0.1 -> ~2px/sec, 1.0 -> ~3px/sec, 5.0 -> ~20px/sec, 10.0 -> ~200px/sec
-    const pxPerSec = 1.9091 * Math.exp(0.4652 * effectiveSpeed);
+    // Page-fraction speed: pct% of panel height per second + fine decimal
+    const panelH = el.clientHeight || 600;
+    const effectivePct = state.speedPct + state.microSpeed / 10;
+    if (effectivePct === 0) { lastTs = ts; return; }
+    const pxPerSec = panelH * effectivePct / 100;
     const px = (ts - lastTs) / 1000 * pxPerSec;
     el.scrollTop += px;
     // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
@@ -1172,16 +1187,19 @@ $('play-btn').addEventListener('click', () => setAuto(!state.autoOn));
 $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.autoOn));
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
+function setPreset(pct) {
+  state.speedPct = pct;
+  document.querySelectorAll('.spd-preset').forEach(b =>
+    b.classList.toggle('active', +b.dataset.pct === pct)
+  );
+  updateSliders();
+}
+
 function updateSliders() {
-  updateSlider($('spd-slider'),   $('spd-ticks'),   11, state.speed,      0, 10);
-  updateSlider($('micro-slider'), $('micro-ticks'),  10, state.microSpeed, 0,  9);
-  updateSlider($('font-slider'),  $('font-ticks'),   10, state.fontSize,  10, 28);
-  const effective = (state.speed + state.microSpeed / 10).toFixed(1);
-  $('spd-val').textContent = effective;
+  updateSlider($('micro-slider'), $('micro-ticks'), 10, state.microSpeed, 0, 9);
+  updateSlider($('font-slider'),  $('font-ticks'),  10, state.fontSize,  10, 28);
   $('font-val').textContent = state.fontSize;
-  $('spd-label').textContent = SPD[Math.round(+effective)] || '';
-  // Sub label: show e.g. "5.3" when main=5, sub=3
-  $('micro-val').textContent = state.speed + '.' + state.microSpeed;
+  $('micro-val').textContent = '+' + state.microSpeed + '.0';
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
@@ -1202,7 +1220,6 @@ function updateSlider(input, ticks, steps, val, min, max) {
   }
 }
 
-$('spd-slider').addEventListener('input', e => { state.speed = +e.target.value; updateSliders(); });
 $('micro-slider').addEventListener('input', e => { state.microSpeed = +e.target.value; updateSliders(); });
 $('font-slider').addEventListener('input', e => {
   state.fontSize = +e.target.value; updateSliders();
