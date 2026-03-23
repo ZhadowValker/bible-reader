@@ -1111,12 +1111,9 @@ function parsePaste() {
   catch(err) { showModalError(err.message); }
 }
 
-// ── Default URLs ──────────────────────────────────────────────────────────────
-const DEFAULT_LEFT_URL  = 'https://raw.githubusercontent.com/sajeevavahini/bibles/refs/heads/main/Telugu%20Bible%20(BSI).xml';
-const DEFAULT_RIGHT_URL = 'https://raw.githubusercontent.com/sajeevavahini/bibles/refs/heads/main/New%20International%20Version%20(UK).xml';
-// ── No proxy needed on GitHub Pages ─────────────────────────────────────────
-// raw.githubusercontent.com sends Access-Control-Allow-Origin: *
-// so direct fetch works when served from any https:// origin.
+// ── Default URLs — served from same origin via GitHub Actions build ───────────
+const DEFAULT_LEFT_URL  = './bibles/telugu-bsi.xml';
+const DEFAULT_RIGHT_URL = './bibles/niv-uk.xml';
 
 // ── Splash helpers ────────────────────────────────────────────────────────────
 function setSplashDot(id, status) {
@@ -1134,12 +1131,13 @@ function hideSplash() {
 function skipSplash() { hideSplash(); }
 
 async function fetchBibleURL(url, onStatus) {
-  if (onStatus) onStatus('fetching...');
+  if (onStatus) onStatus('loading...');
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
   return loadXMLText(text);
 }
+
 
 async function autoLoadDefaults() {
   const skipTimer = setTimeout(() => { $('splash-skip').style.display = ''; }, 6000);
