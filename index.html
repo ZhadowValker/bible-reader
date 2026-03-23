@@ -819,17 +819,25 @@ function scheduleLineRedraw() {
   lineRaf = requestAnimationFrame(() => { lineRaf = null; drawVerseLines(); });
 }
 
-function onPanelScroll(srcEl) {
+let syncingManual = false;
+
+function onPanelScroll(srcEl, dstEl) {
   const vnum = getTopVerse(srcEl);
   if (vnum && vnum !== currentTopVerse) {
     currentTopVerse = vnum;
     highlightVerse(vnum);
+    // Sync the other panel to the same verse on manual scroll (parallel mode only)
+    if (state.parallel && !state.autoOn && !syncingManual) {
+      syncingManual = true;
+      scrollPanelToVerse(dstEl, vnum);
+      setTimeout(() => { syncingManual = false; }, 100);
+    }
   }
   scheduleLineRedraw();
 }
 
-$('body-left').addEventListener('scroll',  () => onPanelScroll($('body-left')));
-$('body-right').addEventListener('scroll', () => onPanelScroll($('body-right')));
+$('body-left').addEventListener('scroll',  () => onPanelScroll($('body-left'),  $('body-right')));
+$('body-right').addEventListener('scroll', () => onPanelScroll($('body-right'), $('body-left')));
 
 // ── Auto-scroll ───────────────────────────────────────────────────────────────
 // In parallel mode: scroll both panels together via body-left
