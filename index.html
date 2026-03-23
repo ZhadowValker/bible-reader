@@ -477,21 +477,12 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="ribbon-label">Scroll</span>
         <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
-        <!-- Preset speed buttons: % of panel height per second -->
-        <div style="display:flex;gap:3px" id="preset-btns">
-          <button class="spd-preset" data-spd="5"   onclick="setPreset(5,  '0.5×')">0.5×</button>
-          <button class="spd-preset" data-spd="16"  onclick="setPreset(16, '1×')">1×</button>
-          <button class="spd-preset active" data-spd="31" onclick="setPreset(31, '2×')">2×</button>
-          <button class="spd-preset" data-spd="83"  onclick="setPreset(83, '5×')">5×</button>
-          <button class="spd-preset" data-spd="208" onclick="setPreset(208,'10×')">10×</button>
+        <div class="slider-wrap" style="width:120px">
+          <input type="range" id="wpm-slider" min="60" max="400" value="180" step="10" style="width:100%">
+          <div class="slider-ticks" id="wpm-ticks"></div>
         </div>
-        <div style="width:1px;align-self:stretch;background:var(--divider);margin:0 2px"></div>
-        <span class="ribbon-label" style="font-size:7px">FINE</span>
-        <div class="slider-wrap" style="width:80px">
-          <input type="range" id="micro-slider" min="0" max="9" value="0" style="width:100%">
-          <div class="slider-ticks" id="micro-ticks"></div>
-        </div>
-        <span id="micro-val" style="font-size:10px;color:var(--gold);font-weight:bold;width:28px">+0.0</span>
+        <span id="wpm-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:42px">180</span>
+        <span style="font-size:9px;color:var(--muted)">WPM</span>
         <div id="blink-wrap" style="display:none;align-items:center;gap:4px">
           <span class="blink-dot"></span>
           <span class="blink-label">scrolling</span>
@@ -633,7 +624,7 @@ const state = {
   leftLabel: '', rightLabel: '',
   book: '', chap: '', verse: '',
   verses: null,      // { left: {}, right: {}, nums: [] }
-  autoOn: false, speedPct: 31, microSpeed: 0, speedLabel: '2×', fontSize: 15,
+  autoOn: false, wpm: 180, fontSize: 15,
   parallel: true, activeSide: 'left',
   dark: true, ribbonOpen: true,
   modalSide: null, modalMethod: null,
@@ -836,10 +827,19 @@ function autoLoop(ts) {
   const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
-    // fine adds 0-10% of base speed in 9 steps
-    const effectiveSpeed = state.speedPct * (1 + state.microSpeed / 90);
-    if (effectiveSpeed === 0) { lastTs = ts; return; }
-    const px = (ts - lastTs) * effectiveSpeed * 0.001;
+    // WPM-based scrolling:
+    // Estimate how many words are visible on screen, then scroll at reading pace.
+    const panelH    = el.clientHeight  || 600;
+    const panelW    = el.clientWidth   || 400;
+    const lineH     = state.fontSize * 1.9;
+    const charsPerPx = 1 / (state.fontSize * 0.52);      // ~chars that fit per px width
+    const wordsPerLine  = Math.max(1, (panelW * charsPerPx) / 5);
+    const linesOnScreen = Math.max(1, panelH / lineH);
+    const wordsOnScreen = wordsPerLine * linesOnScreen;
+    // Seconds to read one screenful at current WPM
+    const secPerScreen  = (wordsOnScreen / state.wpm) * 60;
+    const pxPerSec      = panelH / secPerScreen;
+    const px = (ts - lastTs) / 1000 * pxPerSec;
     el.scrollTop += px;
     // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
     if (state.parallel) {
@@ -1185,23 +1185,11 @@ $('play-btn').addEventListener('click', () => setAuto(!state.autoOn));
 $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.autoOn));
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
-function setPreset(spd, label) {
-  state.speedPct = spd;
-  state.speedLabel = label || '';
-  state.microSpeed = 0;
-  $('micro-slider').value = 0;
-  document.querySelectorAll('.spd-preset').forEach(b =>
-    b.classList.toggle('active', +b.dataset.spd === spd)
-  );
-  updateSliders();
-}
-
 function updateSliders() {
-  updateSlider($('micro-slider'), $('micro-ticks'), 10, state.microSpeed, 0, 9);
-  updateSlider($('font-slider'),  $('font-ticks'),  10, state.fontSize,  10, 28);
+  updateSlider($('wpm-slider'),  $('wpm-ticks'),  8, state.wpm,       60, 400);
+  updateSlider($('font-slider'), $('font-ticks'), 10, state.fontSize,  10,  28);
+  $('wpm-val').textContent  = state.wpm;
   $('font-val').textContent = state.fontSize;
-  const finePct = (state.microSpeed / 90 * 100).toFixed(0);
-  $('micro-val').textContent = '+' + finePct + '%';
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
@@ -1222,7 +1210,7 @@ function updateSlider(input, ticks, steps, val, min, max) {
   }
 }
 
-$('micro-slider').addEventListener('input', e => { state.microSpeed = +e.target.value; updateSliders(); });
+$('wpm-slider').addEventListener('input', e => { state.wpm = +e.target.value; updateSliders(); });
 $('font-slider').addEventListener('input', e => {
   state.fontSize = +e.target.value; updateSliders();
   document.querySelectorAll('.verse-text').forEach(el => el.style.fontSize = state.fontSize + 'px');
