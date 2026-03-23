@@ -478,11 +478,12 @@
         <span class="ribbon-label">Scroll</span>
         <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
         <div class="slider-wrap" style="width:120px">
-          <input type="range" id="wpm-slider" min="60" max="400" value="180" step="10" style="width:100%">
+          <input type="range" id="wpm-slider" min="60" max="1200" value="180" step="10" style="width:100%">
           <div class="slider-ticks" id="wpm-ticks"></div>
         </div>
         <span id="wpm-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:42px">180</span>
         <span style="font-size:9px;color:var(--muted)">WPM</span>
+        <span id="wpm-label" style="font-size:9px;color:var(--muted);font-style:italic"></span>
         <div id="blink-wrap" style="display:none;align-items:center;gap:4px">
           <span class="blink-dot"></span>
           <span class="blink-label">scrolling</span>
@@ -1186,10 +1187,13 @@ $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.a
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
 function updateSliders() {
-  updateSlider($('wpm-slider'),  $('wpm-ticks'),  8, state.wpm,       60, 400);
+  updateSlider($('wpm-slider'),  $('wpm-ticks'),  8, state.wpm,       60, 1200);
   updateSlider($('font-slider'), $('font-ticks'), 10, state.fontSize,  10,  28);
   $('wpm-val').textContent  = state.wpm;
   $('font-val').textContent = state.fontSize;
+  const wpmLabels = [[60,'Slow'],[120,'Easy'],[180,'Avg'],[300,'Fast'],[500,'Speed'],[1200,'Turbo']];
+  const lbl = wpmLabels.slice().reverse().find(([v]) => state.wpm >= v);
+  $('wpm-label').textContent = lbl ? lbl[1] : '';
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
