@@ -479,11 +479,11 @@
         <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
         <!-- Preset speed buttons: % of panel height per second -->
         <div style="display:flex;gap:3px" id="preset-btns">
-          <button class="spd-preset" data-pct="0.5"  onclick="setPreset(0.5)">0.5×</button>
-          <button class="spd-preset" data-pct="1"    onclick="setPreset(1)">1×</button>
-          <button class="spd-preset active" data-pct="2" onclick="setPreset(2)">2×</button>
-          <button class="spd-preset" data-pct="5"    onclick="setPreset(5)">5×</button>
-          <button class="spd-preset" data-pct="10"   onclick="setPreset(10)">10×</button>
+          <button class="spd-preset" data-spd="5"   onclick="setPreset(5,  '0.5×')">0.5×</button>
+          <button class="spd-preset" data-spd="16"  onclick="setPreset(16, '1×')">1×</button>
+          <button class="spd-preset active" data-spd="31" onclick="setPreset(31, '2×')">2×</button>
+          <button class="spd-preset" data-spd="83"  onclick="setPreset(83, '5×')">5×</button>
+          <button class="spd-preset" data-spd="208" onclick="setPreset(208,'10×')">10×</button>
         </div>
         <div style="width:1px;align-self:stretch;background:var(--divider);margin:0 2px"></div>
         <span class="ribbon-label" style="font-size:7px">FINE</span>
@@ -633,7 +633,7 @@ const state = {
   leftLabel: '', rightLabel: '',
   book: '', chap: '', verse: '',
   verses: null,      // { left: {}, right: {}, nums: [] }
-  autoOn: false, speedPct: 2, microSpeed: 0, fontSize: 15,
+  autoOn: false, speedPct: 31, microSpeed: 0, speedLabel: '2×', fontSize: 15,
   parallel: true, activeSide: 'left',
   dark: true, ribbonOpen: true,
   modalSide: null, modalMethod: null,
@@ -836,12 +836,10 @@ function autoLoop(ts) {
   const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
-    // Page-fraction speed: pct% of panel height per second + fine decimal
-    const panelH = el.clientHeight || 600;
-    const effectivePct = state.speedPct + state.microSpeed / 10;
-    if (effectivePct === 0) { lastTs = ts; return; }
-    const pxPerSec = panelH * effectivePct / 100;
-    const px = (ts - lastTs) / 1000 * pxPerSec;
+    // fine adds 0-10% of base speed in 9 steps
+    const effectiveSpeed = state.speedPct * (1 + state.microSpeed / 90);
+    if (effectiveSpeed === 0) { lastTs = ts; return; }
+    const px = (ts - lastTs) * effectiveSpeed * 0.001;
     el.scrollTop += px;
     // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
     if (state.parallel) {
@@ -1187,10 +1185,13 @@ $('play-btn').addEventListener('click', () => setAuto(!state.autoOn));
 $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.autoOn));
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
-function setPreset(pct) {
-  state.speedPct = pct;
+function setPreset(spd, label) {
+  state.speedPct = spd;
+  state.speedLabel = label || '';
+  state.microSpeed = 0;
+  $('micro-slider').value = 0;
   document.querySelectorAll('.spd-preset').forEach(b =>
-    b.classList.toggle('active', +b.dataset.pct === pct)
+    b.classList.toggle('active', +b.dataset.spd === spd)
   );
   updateSliders();
 }
@@ -1199,7 +1200,8 @@ function updateSliders() {
   updateSlider($('micro-slider'), $('micro-ticks'), 10, state.microSpeed, 0, 9);
   updateSlider($('font-slider'),  $('font-ticks'),  10, state.fontSize,  10, 28);
   $('font-val').textContent = state.fontSize;
-  $('micro-val').textContent = '+' + state.microSpeed + '.0';
+  const finePct = (state.microSpeed / 90 * 100).toFixed(0);
+  $('micro-val').textContent = '+' + finePct + '%';
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
