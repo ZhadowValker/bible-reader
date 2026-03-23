@@ -371,15 +371,14 @@
 
   /* ── Verse connector lines ── */
   #verse-lines { overflow: visible; }
-  #verse-lines line {
+  #verse-lines path {
     stroke: var(--gold);
-    stroke-width: 0.5;
-    opacity: 0.18;
-    transition: opacity 0.2s;
+    stroke-width: 0.8;
+    opacity: 0.22;
   }
-  #verse-lines line.active {
-    opacity: 0.55;
-    stroke-width: 1;
+  #verse-lines path.active {
+    opacity: 0.7;
+    stroke-width: 1.5;
   }
 
   /* ── Scrollbar ── */
@@ -735,32 +734,44 @@ function drawVerseLines() {
 
   const leftEl  = $('body-left');
   const rightEl = $('body-right');
-  const svgRect = svg.getBoundingClientRect();
+  const panelsEl = $('panels');
 
-  // Get all verse numbers visible in EITHER panel
-  const allNums = state.verses.nums;
-  const lines = [];
+  // SVG sits over #panels. We compute Y relative to #panels top.
+  // For each panel, a verse row's visible Y = row.offsetTop - panel.scrollTop + panel.offsetTop (relative to #panels)
+  const leftPanelOffsetTop  = leftEl.getBoundingClientRect().top  - panelsEl.getBoundingClientRect().top;
+  const rightPanelOffsetTop = rightEl.getBoundingClientRect().top - panelsEl.getBoundingClientRect().top;
+  const leftPanelH  = leftEl.clientHeight;
+  const rightPanelH = rightEl.clientHeight;
 
-  allNums.forEach(vnum => {
-    const leftY  = getVerseRowMidY(leftEl,  vnum);
-    const rightY = getVerseRowMidY(rightEl, vnum);
-    if (leftY === null || rightY === null) return;
+  // x: verse number label sits at left edge of each panel body + a small indent
+  // Line runs from right side of left panel to left side of right panel
+  const leftRect  = leftEl.getBoundingClientRect();
+  const rightRect = rightEl.getBoundingClientRect();
+  const panelsRect = panelsEl.getBoundingClientRect();
+  const x1 = leftRect.right  - panelsRect.left;
+  const x2 = rightRect.left  - panelsRect.left;
+  const xMid = (x1 + x2) / 2;
 
-    // Convert to SVG-local coordinates
-    const y1 = leftY  - svgRect.top;
-    const y2 = rightY - svgRect.top;
+  const paths = [];
+  state.verses.nums.forEach(vnum => {
+    const leftRow  = leftEl.querySelector(`[data-vnum="${vnum}"]`);
+    const rightRow = rightEl.querySelector(`[data-vnum="${vnum}"]`);
+    if (!leftRow || !rightRow) return;
 
-    // x1 = right edge of left panel, x2 = left edge of right panel
-    const leftPanelRect  = leftEl.getBoundingClientRect();
-    const rightPanelRect = rightEl.getBoundingClientRect();
-    const x1 = leftPanelRect.right  - svgRect.left;
-    const x2 = rightPanelRect.left  - svgRect.left;
+    // Y position of verse midpoint relative to panel body top, then adjusted for scroll
+    const ly = leftRow.offsetTop  + leftRow.offsetHeight  / 2 - leftEl.scrollTop  + leftPanelOffsetTop;
+    const ry = rightRow.offsetTop + rightRow.offsetHeight / 2 - rightEl.scrollTop + rightPanelOffsetTop;
+
+    // Skip if either verse is outside its panel's visible area
+    if (ly < leftPanelOffsetTop  || ly > leftPanelOffsetTop  + leftPanelH)  return;
+    if (ry < rightPanelOffsetTop || ry > rightPanelOffsetTop + rightPanelH) return;
 
     const isActive = vnum === currentTopVerse;
-    lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${isActive ? 'active' : ''}"/>`);
+    // Cubic bezier: starts at left panel edge, curves through midpoint, ends at right panel edge
+    paths.push(`<path d="M${x1},${ly} C${xMid},${ly} ${xMid},${ry} ${x2},${ry}" fill="none" class="${isActive ? 'active' : ''}"/>`);
   });
 
-  svg.innerHTML = lines.join('');
+  svg.innerHTML = paths.join('');
 }
 
 let lineRaf = null;
