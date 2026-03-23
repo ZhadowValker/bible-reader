@@ -478,13 +478,29 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="ribbon-label">Scroll</span>
         <button class="btn-round" id="play-btn-2" style="width:28px;height:28px">▶</button>
-        <div class="slider-wrap" style="width:120px">
-          <input type="range" id="wpm-slider" min="60" max="1200" value="180" step="10" style="width:100%">
-          <div class="slider-ticks" id="wpm-ticks"></div>
+
+        <!-- Parallel: WPM slider -->
+        <div id="scroll-parallel" style="display:flex;align-items:center;gap:8px">
+          <div class="slider-wrap" style="width:120px">
+            <input type="range" id="wpm-slider" min="60" max="1200" value="180" step="10" style="width:100%">
+            <div class="slider-ticks" id="wpm-ticks"></div>
+          </div>
+          <span id="wpm-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:42px">180</span>
+          <span style="font-size:9px;color:var(--muted)">WPM</span>
+          <span id="wpm-label" style="font-size:9px;color:var(--muted);font-style:italic"></span>
         </div>
-        <span id="wpm-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:42px">180</span>
-        <span style="font-size:9px;color:var(--muted)">WPM</span>
-        <span id="wpm-label" style="font-size:9px;color:var(--muted);font-style:italic"></span>
+
+        <!-- Single: Page-fraction % slider -->
+        <div id="scroll-single" style="display:none;align-items:center;gap:8px">
+          <div class="slider-wrap" style="width:120px">
+            <input type="range" id="pct-slider" min="1" max="20" value="5" step="1" style="width:100%">
+            <div class="slider-ticks" id="pct-ticks"></div>
+          </div>
+          <span id="pct-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:28px">5</span>
+          <span style="font-size:9px;color:var(--muted)">%/sec</span>
+          <span id="pct-label" style="font-size:9px;color:var(--muted);font-style:italic"></span>
+        </div>
+
         <div id="blink-wrap" style="display:none;align-items:center;gap:4px">
           <span class="blink-dot"></span>
           <span class="blink-label">scrolling</span>
@@ -626,7 +642,7 @@ const state = {
   leftLabel: '', rightLabel: '',
   book: '', chap: '', verse: '',
   verses: null,      // { left: {}, right: {}, nums: [] }
-  autoOn: false, wpm: 180, fontSize: 15,
+  autoOn: false, wpm: 180, pagePct: 5, fontSize: 15,
   parallel: true, activeSide: 'left',
   dark: true, ribbonOpen: true,
   modalSide: null, modalMethod: null,
@@ -829,18 +845,25 @@ function autoLoop(ts) {
   const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
-    // WPM-based scrolling:
-    // Estimate how many words are visible on screen, then scroll at reading pace.
-    const panelH    = el.clientHeight  || 600;
-    const panelW    = el.clientWidth   || 400;
-    const lineH     = state.fontSize * 1.9;
-    const charsPerPx = 1 / (state.fontSize * 0.52);      // ~chars that fit per px width
-    const wordsPerLine  = Math.max(1, (panelW * charsPerPx) / 5);
-    const linesOnScreen = Math.max(1, panelH / lineH);
-    const wordsOnScreen = wordsPerLine * linesOnScreen;
-    // Seconds to read one screenful at current WPM
-    const secPerScreen  = (wordsOnScreen / state.wpm) * 60;
-    const pxPerSec      = panelH / secPerScreen;
+    const panelH = el.clientHeight || 600;
+    const panelW = el.clientWidth  || 400;
+    let pxPerSec;
+
+    if (state.parallel) {
+      // ── Parallel mode: WPM-based ──────────────────────────────────────────
+      const lineH        = state.fontSize * 1.9;
+      const charsPerPx   = 1 / (state.fontSize * 0.52);
+      const wordsPerLine = Math.max(1, (panelW * charsPerPx) / 5);
+      const linesOnScreen = Math.max(1, panelH / lineH);
+      const wordsOnScreen = wordsPerLine * linesOnScreen;
+      const secPerScreen  = (wordsOnScreen / state.wpm) * 60;
+      pxPerSec = panelH / secPerScreen;
+    } else {
+      // ── Single mode: page-fraction ────────────────────────────────────────
+      // pagePct% of panel height per second
+      pxPerSec = panelH * state.pagePct / 100;
+    }
+
     const px = (ts - lastTs) / 1000 * pxPerSec;
     el.scrollTop += px;
     // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
@@ -893,6 +916,7 @@ function setParallel(p) {
   }
   equaliseVerseHeights();
   setTimeout(drawVerseLines, 50);
+  updateSliders();
 }
 
 function setActiveSide(side) {
@@ -1188,13 +1212,26 @@ $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.a
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
 function updateSliders() {
-  updateSlider($('wpm-slider'),  $('wpm-ticks'),  8, state.wpm,       60, 1200);
-  updateSlider($('font-slider'), $('font-ticks'), 10, state.fontSize,  10,  28);
-  $('wpm-val').textContent  = state.wpm;
-  $('font-val').textContent = state.fontSize;
+  // WPM slider (parallel mode)
+  updateSlider($('wpm-slider'), $('wpm-ticks'), 8, state.wpm,     60, 1200);
+  $('wpm-val').textContent = state.wpm;
   const wpmLabels = [[60,'Slow'],[120,'Easy'],[180,'Avg'],[300,'Fast'],[500,'Speed'],[1200,'Turbo']];
-  const lbl = wpmLabels.slice().reverse().find(([v]) => state.wpm >= v);
-  $('wpm-label').textContent = lbl ? lbl[1] : '';
+  const wlbl = wpmLabels.slice().reverse().find(([v]) => state.wpm >= v);
+  $('wpm-label').textContent = wlbl ? wlbl[1] : '';
+
+  // Page% slider (single mode)
+  updateSlider($('pct-slider'), $('pct-ticks'), 10, state.pagePct, 1, 20);
+  $('pct-val').textContent = state.pagePct;
+  const pctLabels = [[1,'Slow'],[5,'Easy'],[10,'Avg'],[15,'Fast'],[20,'Turbo']];
+  const plbl = pctLabels.slice().reverse().find(([v]) => state.pagePct >= v);
+  $('pct-label').textContent = plbl ? plbl[1] : '';
+
+  // Show correct slider based on mode
+  $('scroll-parallel').style.display = state.parallel ? 'flex' : 'none';
+  $('scroll-single').style.display   = state.parallel ? 'none' : 'flex';
+
+  updateSlider($('font-slider'), $('font-ticks'), 10, state.fontSize, 10, 28);
+  $('font-val').textContent = state.fontSize;
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
@@ -1215,7 +1252,8 @@ function updateSlider(input, ticks, steps, val, min, max) {
   }
 }
 
-$('wpm-slider').addEventListener('input', e => { state.wpm = +e.target.value; updateSliders(); });
+$('wpm-slider').addEventListener('input', e => { state.wpm     = +e.target.value; updateSliders(); });
+$('pct-slider').addEventListener('input', e => { state.pagePct = +e.target.value; updateSliders(); });
 $('font-slider').addEventListener('input', e => {
   state.fontSize = +e.target.value; updateSliders();
   document.querySelectorAll('.verse-text').forEach(el => el.style.fontSize = state.fontSize + 'px');
