@@ -469,7 +469,14 @@
           <input type="range" id="spd-slider" min="1" max="10" value="2" style="width:100%">
           <div class="slider-ticks" id="spd-ticks"></div>
         </div>
-        <span id="spd-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:14px">2</span>
+        <span id="spd-val" style="font-size:11px;color:var(--gold);font-weight:bold;width:28px">2.0</span>
+        <div style="width:1px;align-self:stretch;background:var(--divider);margin:0 2px"></div>
+        <span class="ribbon-label" style="font-size:7px">FINE</span>
+        <div class="slider-wrap" style="width:70px">
+          <input type="range" id="micro-slider" min="1" max="10" value="10" style="width:100%">
+          <div class="slider-ticks" id="micro-ticks"></div>
+        </div>
+        <span id="micro-val" style="font-size:10px;color:var(--muted);width:20px">.×1</span>
         <div id="blink-wrap" style="display:none;align-items:center;gap:4px">
           <span class="blink-dot"></span>
           <span class="blink-label">scrolling</span>
@@ -611,7 +618,7 @@ const state = {
   leftLabel: '', rightLabel: '',
   book: '', chap: '', verse: '',
   verses: null,      // { left: {}, right: {}, nums: [] }
-  autoOn: false, speed: 2, fontSize: 15,
+  autoOn: false, speed: 2, microSpeed: 1.0, fontSize: 15,
   parallel: true, activeSide: 'left',
   dark: true, ribbonOpen: true,
   modalSide: null, modalMethod: null,
@@ -814,7 +821,7 @@ function autoLoop(ts) {
   const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
-    const px = (ts - lastTs) * state.speed * 0.03;
+    const px = (ts - lastTs) * state.speed * state.microSpeed * 0.03;
     el.scrollTop += px;
     // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
     if (state.parallel) {
@@ -1161,11 +1168,14 @@ $('play-btn-2').addEventListener('click', () => state.verses && setAuto(!state.a
 
 // ── Sliders ───────────────────────────────────────────────────────────────────
 function updateSliders() {
-  updateSlider($('spd-slider'), $('spd-ticks'), 10, state.speed, 1, 10);
-  updateSlider($('font-slider'), $('font-ticks'), 10, state.fontSize, 10, 28);
-  $('spd-val').textContent = state.speed;
+  updateSlider($('spd-slider'),   $('spd-ticks'),   10, state.speed,      1,  10);
+  updateSlider($('micro-slider'), $('micro-ticks'),  10, state.microSpeed * 10, 1, 10);
+  updateSlider($('font-slider'),  $('font-ticks'),   10, state.fontSize,   10, 28);
+  const effective = (state.speed * state.microSpeed).toFixed(1);
+  $('spd-val').textContent = effective;
   $('font-val').textContent = state.fontSize;
   $('spd-label').textContent = SPD[state.speed] || '';
+  $('micro-val').textContent = '.×' + (state.microSpeed * 10).toFixed(0);
 }
 
 function updateSlider(input, ticks, steps, val, min, max) {
@@ -1187,6 +1197,7 @@ function updateSlider(input, ticks, steps, val, min, max) {
 }
 
 $('spd-slider').addEventListener('input', e => { state.speed = +e.target.value; updateSliders(); });
+$('micro-slider').addEventListener('input', e => { state.microSpeed = +e.target.value / 10; updateSliders(); });
 $('font-slider').addEventListener('input', e => {
   state.fontSize = +e.target.value; updateSliders();
   document.querySelectorAll('.verse-text').forEach(el => el.style.fontSize = state.fontSize + 'px');
