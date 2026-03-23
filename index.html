@@ -671,22 +671,15 @@ const bodyRight = () => $('body-right');
 
 // ── Scroll sync ───────────────────────────────────────────────────────────────
 let syncing = false;
-$('body-left').addEventListener('scroll', () => {
-  if (state.autoOn || syncing) return;
-  const el = $('body-left'), r = $('body-right');
+function syncScroll(src, dst) {
+  if (state.autoOn || syncing || !state.parallel) return;
   syncing = true;
-  const pct = el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight);
-  r.scrollTop = pct * Math.max(1, r.scrollHeight - r.clientHeight);
-  requestAnimationFrame(() => { syncing = false; });
-});
-$('body-right').addEventListener('scroll', () => {
-  if (state.autoOn || syncing) return;
-  const el = $('body-right'), l = $('body-left');
-  syncing = true;
-  const pct = el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight);
-  l.scrollTop = pct * Math.max(1, l.scrollHeight - l.clientHeight);
-  requestAnimationFrame(() => { syncing = false; });
-});
+  const pct = src.scrollTop / Math.max(1, src.scrollHeight - src.clientHeight);
+  dst.scrollTop = pct * Math.max(1, dst.scrollHeight - dst.clientHeight);
+  setTimeout(() => { syncing = false; }, 50);
+}
+$('body-left').addEventListener('scroll', () => syncScroll($('body-left'), $('body-right')));
+$('body-right').addEventListener('scroll', () => syncScroll($('body-right'), $('body-left')));
 
 // ── Auto-scroll ───────────────────────────────────────────────────────────────
 let rafId = null, lastTs = null;
@@ -1188,8 +1181,25 @@ async function autoLoadDefaults() {
 
   if (leftOk) { $('left-label').textContent = state.leftLabel; $('panel-left-label').textContent = state.leftLabel; $('tab-left').textContent = state.leftLabel; }
   if (rightOk) { $('right-label').textContent = state.rightLabel; $('panel-right-label').textContent = state.rightLabel; $('tab-right').textContent = state.rightLabel; }
-  populateBooks(); populateChaps(); populateVerses();
-  updateRead(); updateNavBtns(); updateChapBtn(); updateStatus(); updateLoadBtns(); updateEmptyPanels();
+  populateBooks();
+
+  // Auto-open Genesis 1:1 if both Bibles loaded
+  if (leftOk && rightOk) {
+    const firstBook = Object.keys(state.leftData)[0];
+    if (firstBook) {
+      selectBook(firstBook);
+      const firstChap = Object.keys(state.leftData[firstBook]).sort((a,b) => +a - +b)[0];
+      if (firstChap) {
+        selectChap(firstChap);
+        readChap();
+        setTimeout(() => scrollToVerse('1'), 200);
+      }
+    }
+  } else {
+    populateChaps(); populateVerses();
+  }
+
+  updateRead(); updateNavBtns(); updateChapBtn(); updateStatus(); updateLoadBtns();
 
   await new Promise(r => setTimeout(r, 500));
   hideSplash();
