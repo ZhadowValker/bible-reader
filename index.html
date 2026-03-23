@@ -380,6 +380,17 @@
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.15; } }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Book dropdown ── */
+  #book-drop .bd-item {
+    display: block; width: 100%; padding: 7px 16px;
+    background: transparent; border: none;
+    color: var(--text); font-family: Georgia, serif; font-size: 13px;
+    text-align: left; cursor: pointer; transition: background 0.1s;
+    white-space: nowrap;
+  }
+  #book-drop .bd-item:hover { background: var(--gold-faint); color: var(--gold); }
+  #book-drop .bd-item.active { background: var(--gold-faint); color: var(--gold); font-weight: bold; }
+
   /* ── Speed preset buttons ── */
   .spd-preset {
     border: 1px solid var(--gold-border); background: var(--btn-inactive-bg);
@@ -562,6 +573,15 @@
       <button class="btn-nav" id="nav-next-chap" onclick="goNextChap()" disabled>›</button>
       <button class="btn-nav" id="nav-next-book" onclick="goNextBook()" disabled>»</button>
     </div>
+  </div>
+
+  <!-- Custom book dropdown (triggered by clicking book name in infobar) -->
+  <div id="book-drop-overlay" onclick="closeBookDrop()" style="display:none;position:fixed;inset:0;z-index:400"></div>
+  <div id="book-drop" style="display:none;position:fixed;z-index:401;
+    background:var(--bar);border:1px solid var(--gold-border);
+    border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,0.6);
+    min-width:200px;max-height:360px;overflow-y:auto;
+    font-family:Georgia,serif;">
   </div>
 
   <!-- Single-view tabs -->
@@ -1301,20 +1321,45 @@ $('font-slider').addEventListener('input', e => {
 });
 
 // ── Chapter dropdown ──────────────────────────────────────────────────────────
-// ── Book select via native dropdown ─────────────────────────────────────────
+// ── Custom book dropdown ─────────────────────────────────────────────────────
 function openBookSelect() {
-  if (!getBooks().length) return;
-  // Open ribbon if hidden so sel-book is in DOM and focusable
-  if (!state.ribbonOpen) {
-    state.ribbonOpen = true;
-    $('ribbon').style.display = '';
-    $('ribbon-toggle').textContent = '☰ ▲';
-    $('ribbon-toggle').classList.add('open');
-  }
-  // Trigger the native select dropdown
-  const sel = $('sel-book');
-  sel.focus();
-  sel.click();
+  const books = getBooks();
+  if (!books.length) return;
+
+  const drop = $('book-drop');
+  const overlay = $('book-drop-overlay');
+
+  // Build list
+  drop.innerHTML = '';
+  books.forEach((b, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'bd-item' + (b === state.book ? ' active' : '');
+    btn.textContent = (i + 1) + '). ' + b;
+    btn.onclick = () => {
+      selectBook(b);
+      const chaps = Object.keys(state.leftData[b] || {}).sort((a, z) => +a - +z);
+      if (chaps[0]) { selectChap(chaps[0]); readChap(); }
+      closeBookDrop();
+    };
+    drop.appendChild(btn);
+  });
+
+  // Position below the infobar center (chap-btn area)
+  const ref = $('chap-btn').getBoundingClientRect();
+  drop.style.left = Math.max(4, ref.left - 80) + 'px';
+  drop.style.top  = ref.bottom + 4 + 'px';
+
+  drop.style.display = 'block';
+  overlay.style.display = 'block';
+
+  // Scroll active item into view
+  const active = drop.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'center' });
+}
+
+function closeBookDrop() {
+  $('book-drop').style.display = 'none';
+  $('book-drop-overlay').style.display = 'none';
 }
 
 function toggleChapDrop() {
