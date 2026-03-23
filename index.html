@@ -672,26 +672,37 @@ const bodyRight = () => $('body-right');
 // ── Scroll sync ───────────────────────────────────────────────────────────────
 let syncing = false;
 function syncScroll(src, dst) {
+  // Only sync in parallel mode, and not during auto-scroll
   if (state.autoOn || syncing || !state.parallel) return;
   syncing = true;
   const pct = src.scrollTop / Math.max(1, src.scrollHeight - src.clientHeight);
   dst.scrollTop = pct * Math.max(1, dst.scrollHeight - dst.clientHeight);
   setTimeout(() => { syncing = false; }, 50);
 }
-$('body-left').addEventListener('scroll', () => syncScroll($('body-left'), $('body-right')));
+$('body-left').addEventListener('scroll',  () => syncScroll($('body-left'),  $('body-right')));
 $('body-right').addEventListener('scroll', () => syncScroll($('body-right'), $('body-left')));
 
 // ── Auto-scroll ───────────────────────────────────────────────────────────────
+// In parallel mode: scroll both panels together via body-left
+// In single mode:   scroll whichever panel is currently visible (activeSide)
 let rafId = null, lastTs = null;
+function getActivePanel() {
+  if (state.parallel) return $('body-left');
+  return state.activeSide === 'right' ? $('body-right') : $('body-left');
+}
 function autoLoop(ts) {
   rafId = requestAnimationFrame(autoLoop);
   if (!state.autoOn) { lastTs = null; return; }
-  const el = $('body-left');
+  const el = getActivePanel();
   if (!el) { lastTs = null; return; }
   if (lastTs !== null) {
     const px = (ts - lastTs) * state.speed * 0.03;
     el.scrollTop += px;
-    $('body-right').scrollTop = el.scrollTop;
+    // In parallel mode mirror to right panel
+    if (state.parallel) {
+      const other = $('body-right');
+      other.scrollTop = el.scrollTop;
+    }
     if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
       setAuto(false); lastTs = null; return;
     }
