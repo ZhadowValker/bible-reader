@@ -669,18 +669,54 @@ const $ = id => document.getElementById(id);
 const bodyLeft = () => $('body-left');
 const bodyRight = () => $('body-right');
 
-// ── Scroll sync ───────────────────────────────────────────────────────────────
-let syncing = false;
-function syncScroll(src, dst) {
-  // Only sync in parallel mode, and not during auto-scroll
-  if (state.autoOn || syncing || !state.parallel) return;
-  syncing = true;
-  const pct = src.scrollTop / Math.max(1, src.scrollHeight - src.clientHeight);
-  dst.scrollTop = pct * Math.max(1, dst.scrollHeight - dst.clientHeight);
-  setTimeout(() => { syncing = false; }, 50);
+// ── Verse-level sync ─────────────────────────────────────────────────────────
+// Tracks which verse is at the top of the viewport for each panel,
+// then syncs the other panel to the same verse number.
+
+let currentTopVerse = null;  // verse number currently at top of view
+let syncingVerse = false;
+
+function getTopVerse(panelEl) {
+  // Find the first verse-row whose top is at or just below the panel's scrollTop
+  const rows = panelEl.querySelectorAll('.verse-row');
+  let best = null;
+  for (const row of rows) {
+    if (row.offsetTop >= panelEl.scrollTop - 10) {
+      best = row.dataset.vnum;
+      break;
+    }
+  }
+  return best;
 }
-$('body-left').addEventListener('scroll',  () => syncScroll($('body-left'),  $('body-right')));
-$('body-right').addEventListener('scroll', () => syncScroll($('body-right'), $('body-left')));
+
+function scrollPanelToVerse(panelEl, vnum) {
+  if (!vnum) return;
+  const target = panelEl.querySelector(`[data-vnum="${vnum}"]`);
+  if (target) panelEl.scrollTop = target.offsetTop - 16;
+}
+
+function onPanelScroll(srcEl, dstEl) {
+  if (syncingVerse || state.autoOn) return;
+  const vnum = getTopVerse(srcEl);
+  if (!vnum || vnum === currentTopVerse) return;
+  currentTopVerse = vnum;
+  // Update verse select
+  $('sel-verse').value = vnum;
+  state.verse = vnum;
+  // Highlight in both panels
+  document.querySelectorAll('.verse-row').forEach(r =>
+    r.classList.toggle('highlighted', r.dataset.vnum === vnum)
+  );
+  // Sync destination panel (parallel mode only)
+  if (state.parallel) {
+    syncingVerse = true;
+    scrollPanelToVerse(dstEl, vnum);
+    setTimeout(() => { syncingVerse = false; }, 80);
+  }
+}
+
+$('body-left').addEventListener('scroll',  () => onPanelScroll($('body-left'),  $('body-right')));
+$('body-right').addEventListener('scroll', () => onPanelScroll($('body-right'), $('body-left')));
 
 // ── Auto-scroll ───────────────────────────────────────────────────────────────
 // In parallel mode: scroll both panels together via body-left
@@ -698,10 +734,20 @@ function autoLoop(ts) {
   if (lastTs !== null) {
     const px = (ts - lastTs) * state.speed * 0.03;
     el.scrollTop += px;
-    // In parallel mode mirror to right panel
+    // In parallel mode mirror to right panel at pixel level (smooth during auto-scroll)
     if (state.parallel) {
       const other = $('body-right');
       other.scrollTop = el.scrollTop;
+    }
+    // Track top verse during auto-scroll
+    const v = getTopVerse(el);
+    if (v && v !== currentTopVerse) {
+      currentTopVerse = v;
+      state.verse = v;
+      $('sel-verse').value = v;
+      document.querySelectorAll('.verse-row').forEach(r =>
+        r.classList.toggle('highlighted', r.dataset.vnum === v)
+      );
     }
     if (el.scrollTop >= el.scrollHeight - el.clientHeight - 1) {
       setAuto(false); lastTs = null; return;
@@ -748,6 +794,12 @@ function setActiveSide(side) {
   if (!state.parallel) {
     $('panel-left').style.display  = side === 'left'  ? '' : 'none';
     $('panel-right').style.display = side === 'right' ? '' : 'none';
+    // Restore scroll position to the same verse we were reading
+    const targetPanel = side === 'right' ? $('body-right') : $('body-left');
+    const verseToRestore = currentTopVerse || state.verse;
+    if (verseToRestore) {
+      setTimeout(() => scrollPanelToVerse(targetPanel, verseToRestore), 30);
+    }
   }
 }
 
