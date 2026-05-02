@@ -599,6 +599,178 @@
     color: var(--verse);
     font-style: italic;
   }
+
+  /* ── Verse Picker Modal ── */
+  #verse-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: var(--overlay);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  #verse-picker-overlay.open {
+    display: flex;
+  }
+  #verse-picker {
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
+    border-radius: 10px;
+    width: 520px;
+    max-width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #verse-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--divider);
+  }
+  #verse-picker-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--verse);
+  }
+  #verse-picker-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  #verse-picker-close {
+    background: transparent;
+    border: 1px solid var(--gold-border);
+    color: var(--muted);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Verse Grid */
+  #verse-grid-container {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  #verse-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+  .verse-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.15s;
+    border: 1px solid var(--gold-border);
+    background: transparent;
+    color: var(--text);
+    user-select: none;
+    min-height: 36px;
+  }
+  .verse-cell:hover {
+    background: var(--gold-faint);
+    border-color: var(--gold);
+  }
+  .verse-cell.selected {
+    background: var(--btn-active-bg);
+    color: var(--btn-active-text);
+    border-color: transparent;
+  }
+  .verse-cell.in-range {
+    background: rgba(201, 168, 76, 0.25);
+    border-color: var(--gold);
+  }
+  .verse-cell.anchor {
+    box-shadow: 0 0 0 2px var(--gold);
+  }
+
+  /* Verse picker info */
+  #verse-picker-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--panel-head);
+    border-bottom: 1px solid var(--divider);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  #verse-picker-count {
+    color: var(--gold);
+    font-weight: bold;
+  }
+
+  /* Verse picker footer */
+  #verse-picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-top: 1px solid var(--divider);
+    gap: 12px;
+  }
+  .picker-btn {
+    border: 1px solid var(--gold-border);
+    background: transparent;
+    color: var(--gold);
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: Georgia, serif;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+  .picker-btn:hover {
+    background: var(--gold-faint);
+  }
+  .picker-btn.primary {
+    background: var(--btn-active-bg);
+    color: var(--btn-active-text);
+    border-color: transparent;
+  }
+  .picker-btn.primary:hover {
+    filter: brightness(1.1);
+  }
+  .picker-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: var(--muted);
+    border-color: var(--bar-border);
+  }
+
+  /* Picker hint */
+  #verse-picker-hint {
+    font-size: 10px;
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+    padding: 8px 24px;
+    border-top: 1px solid var(--divider);
+  }
+
+  /* Select verses button in copy bar */
+  #btn-picker-open {
+    font-size: 14px;
+    padding: 4px 10px;
+  }
 </style>
 </head>
 <body>
@@ -756,12 +928,17 @@
 
   <!-- Copy controls bar -->
   <div id="copy-bar">
-    <div style="display:flex;align-items:center;gap:6px">
-      <input type="checkbox" id="select-all" class="copy-checkbox" onchange="toggleSelectAll()">
-      <label for="select-all" class="copy-label">Select All</label>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="copy-action-btn" id="btn-picker-open" onclick="openVersePicker()">📅 Select Verses</button>
+      <div class="ribbon-divider"></div>
+      <span style="font-size:11px;color:var(--muted)">or</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="select-all" class="copy-checkbox" onchange="toggleSelectAll()">
+        <label for="select-all" class="copy-label">Manual Select</label>
+      </div>
     </div>
-    <div class="ribbon-divider"></div>
     <div id="copy-side-selector" style="display:none;gap:6px">
+      <div class="ribbon-divider"></div>
       <span class="ribbon-label">Copy From</span>
       <button class="copy-side-btn active" id="copy-side-left" onclick="setCopySide('left')">Left</button>
       <button class="copy-side-btn" id="copy-side-right" onclick="setCopySide('right')">Right</button>
@@ -869,6 +1046,35 @@
   </div>
 </div>
 
+<!-- Verse Picker Modal -->
+<div id="verse-picker-overlay" onclick="closeVersePickerOnOverlay(event)">
+  <div id="verse-picker" onclick="event.stopPropagation()">
+    <div id="verse-picker-header">
+      <div>
+        <div id="verse-picker-title">Select Verses</div>
+        <div id="verse-picker-subtitle">Click to select • Shift+click for range • Drag to select multiple</div>
+      </div>
+      <button id="verse-picker-close" onclick="closeVersePicker()">✕</button>
+    </div>
+    <div id="verse-picker-info">
+      <span id="verse-picker-ref">Book Chapter</span>
+      <span id="verse-picker-count">0 selected</span>
+    </div>
+    <div id="verse-grid-container">
+      <div id="verse-grid">
+        <!-- Verse cells generated by JavaScript -->
+      </div>
+    </div>
+    <div id="verse-picker-footer">
+      <button class="picker-btn" onclick="clearPickerSelection()">Clear Selection</button>
+      <div style="display:flex;gap:10px">
+        <button class="picker-btn" onclick="closeVersePicker()">Cancel</button>
+        <button class="picker-btn primary" id="picker-copy-btn" onclick="copyFromPicker()" disabled>Copy Selected</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
 const state = {
@@ -885,6 +1091,11 @@ const state = {
   copyMode: false,
   selectedVerses: new Set(),
   copySide: 'left',
+  // Verse picker state
+  versePickerOpen: false,
+  pickerSelection: new Set(),
+  pickerAnchor: null,
+  isDragging: false,
 };
 
 const BOOK_NAMES = {1:"Genesis",2:"Exodus",3:"Leviticus",4:"Numbers",5:"Deuteronomy",6:"Joshua",7:"Judges",8:"Ruth",9:"1 Samuel",10:"2 Samuel",11:"1 Kings",12:"2 Kings",13:"1 Chronicles",14:"2 Chronicles",15:"Ezra",16:"Nehemiah",17:"Esther",18:"Job",19:"Psalms",20:"Proverbs",21:"Ecclesiastes",22:"Song of Solomon",23:"Isaiah",24:"Jeremiah",25:"Lamentations",26:"Ezekiel",27:"Daniel",28:"Hosea",29:"Joel",30:"Amos",31:"Obadiah",32:"Jonah",33:"Micah",34:"Nahum",35:"Habakkuk",36:"Zephaniah",37:"Haggai",38:"Zechariah",39:"Malachi",40:"Matthew",41:"Mark",42:"Luke",43:"John",44:"Acts",45:"Romans",46:"1 Corinthians",47:"2 Corinthians",48:"Galatians",49:"Ephesians",50:"Philippians",51:"Colossians",52:"1 Thessalonians",53:"2 Thessalonians",54:"1 Timothy",55:"2 Timothy",56:"Titus",57:"Philemon",58:"Hebrews",59:"James",60:"1 Peter",61:"2 Peter",62:"1 John",63:"2 John",64:"3 John",65:"Jude",66:"Revelation"};
@@ -1621,10 +1832,14 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#chap-btn') && !e.target.closest('#chap-dropdown')) closeChapDrop();
 });
 
-// Escape key to exit copy mode
+// Escape key to exit copy mode or verse picker
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && state.copyMode) {
-    cancelCopyMode();
+  if (e.key === 'Escape') {
+    if (state.versePickerOpen) {
+      closeVersePicker();
+    } else if (state.copyMode) {
+      cancelCopyMode();
+    }
   }
 });
 
@@ -1935,8 +2150,12 @@ function copyToClipboard() {
   const bIdx = books.indexOf(state.book);
   const bookName = side === 'left' ? state.book : (rBooks[bIdx] || state.book);
 
-  // Build the reference string
-  const reference = formatReference(bookName, state.chap, selectedNums);
+  // Get the version name based on side
+  const versionName = side === 'left' ? state.leftLabel : state.rightLabel;
+  const cleanVersion = versionName ? versionName.replace(/[()]/g, '').trim() : (side === 'left' ? 'Left' : 'Right');
+
+  // Build the reference string with version
+  const reference = formatReference(bookName, state.chap, selectedNums, cleanVersion);
 
   // Build the content
   const lines = selectedNums.map(n => {
@@ -1957,7 +2176,7 @@ function copyToClipboard() {
   });
 }
 
-function formatReference(book, chapter, verseNums) {
+function formatReference(book, chapter, verseNums, version) {
   const sorted = [...verseNums].sort((a, b) => +a - +b);
 
   // Find ranges
@@ -1975,7 +2194,8 @@ function formatReference(book, chapter, verseNums) {
   }
   ranges.push(start === end ? `${start}` : `${start}-${end}`);
 
-  return `${book} ${chapter}:${ranges.join(', ')}`;
+  const reference = `${book} ${chapter}:${ranges.join(', ')}`;
+  return version ? `${reference} (${version})` : reference;
 }
 
 function showCopyToast(message) {
@@ -1985,6 +2205,215 @@ function showCopyToast(message) {
   setTimeout(() => {
     toast.classList.remove('visible');
   }, 2500);
+}
+
+// ── Verse Picker ─────────────────────────────────────────────────────────────
+function openVersePicker() {
+  if (!state.verses) return;
+  state.versePickerOpen = true;
+  state.pickerSelection.clear();
+  state.pickerAnchor = null;
+  state.isDragging = false;
+
+  // Update reference display
+  const books = getBooks();
+  const rBooks = getRightBooks();
+  const bIdx = books.indexOf(state.book);
+  const rBook = bIdx >= 0 ? (rBooks[bIdx] || state.book) : '';
+  const displayBook = state.copySide === 'left' ? state.book : rBook;
+  $('verse-picker-ref').textContent = `${displayBook} ${state.chap}`;
+
+  renderVerseGrid();
+  updatePickerUI();
+
+  $('verse-picker-overlay').classList.add('open');
+
+  // If not in copy mode, enter it
+  if (!state.copyMode) {
+    toggleCopyMode();
+  }
+}
+
+function closeVersePicker() {
+  state.versePickerOpen = false;
+  state.pickerSelection.clear();
+  state.pickerAnchor = null;
+  state.isDragging = false;
+  $('verse-picker-overlay').classList.remove('open');
+}
+
+function closeVersePickerOnOverlay(e) {
+  if (e.target === $('verse-picker-overlay')) {
+    closeVersePicker();
+  }
+}
+
+function renderVerseGrid() {
+  const grid = $('verse-grid');
+  grid.innerHTML = '';
+
+  if (!state.verses) return;
+
+  state.verses.nums.forEach(n => {
+    const cell = document.createElement('div');
+    cell.className = 'verse-cell';
+    cell.dataset.vnum = n;
+    cell.textContent = n;
+
+    if (state.pickerSelection.has(n)) {
+      cell.classList.add('selected');
+    }
+    if (state.pickerAnchor === n) {
+      cell.classList.add('anchor');
+    }
+
+    // Mouse events for drag selection
+    cell.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      pickerMouseDown(n);
+    });
+    cell.addEventListener('mouseenter', () => {
+      if (state.isDragging) {
+        pickerMouseEnter(n);
+      }
+    });
+    cell.addEventListener('mouseup', () => {
+      pickerMouseUp();
+    });
+
+    // Click with modifier keys
+    cell.addEventListener('click', (e) => {
+      e.preventDefault();
+      pickerClick(n, e.shiftKey, e.ctrlKey || e.metaKey);
+    });
+
+    grid.appendChild(cell);
+  });
+}
+
+function pickerClick(vnum, shiftKey, ctrlKey) {
+  if (shiftKey && state.pickerAnchor !== null) {
+    // Shift+click: select range from anchor to clicked verse
+    selectPickerRange(state.pickerAnchor, vnum);
+    state.pickerAnchor = vnum;
+  } else if (ctrlKey) {
+    // Ctrl+click: toggle individual verse
+    if (state.pickerSelection.has(vnum)) {
+      state.pickerSelection.delete(vnum);
+    } else {
+      state.pickerSelection.add(vnum);
+      state.pickerAnchor = vnum;
+    }
+    renderVerseGrid();
+  } else {
+    // Regular click: set as anchor, clear others, select this one
+    state.pickerSelection.clear();
+    state.pickerSelection.add(vnum);
+    state.pickerAnchor = vnum;
+    renderVerseGrid();
+  }
+  updatePickerUI();
+}
+
+function pickerMouseDown(vnum) {
+  state.isDragging = true;
+  state.dragStart = vnum;
+  state.pickerAnchor = vnum;
+
+  // If not holding modifier, clear previous selection
+  if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+    state.pickerSelection.clear();
+  }
+
+  // Toggle the starting verse
+  if (state.pickerSelection.has(vnum)) {
+    state.pickerSelection.delete(vnum);
+  } else {
+    state.pickerSelection.add(vnum);
+  }
+
+  updatePickerUI();
+  renderVerseGrid();
+}
+
+function pickerMouseEnter(vnum) {
+  if (!state.isDragging || state.dragStart === null) return;
+
+  // Update selection based on drag
+  const start = Math.min(+state.dragStart, +vnum);
+  const end = Math.max(+state.dragStart, +vnum);
+
+  // Clear and rebuild selection for drag
+  state.pickerSelection.clear();
+  for (let i = start; i <= end; i++) {
+    if (state.verses.nums.includes(String(i))) {
+      state.pickerSelection.add(String(i));
+    }
+  }
+
+  // Update visual range highlight
+  document.querySelectorAll('.verse-cell').forEach(cell => {
+    const cn = +cell.dataset.vnum;
+    cell.classList.toggle('in-range', cn >= start && cn <= end && cn !== +state.dragStart && cn !== +vnum);
+  });
+
+  updatePickerUI();
+}
+
+function pickerMouseUp() {
+  if (state.isDragging) {
+    state.isDragging = false;
+    state.dragStart = null;
+    // Remove range highlights
+    document.querySelectorAll('.verse-cell').forEach(cell => {
+      cell.classList.remove('in-range');
+    });
+    renderVerseGrid();
+  }
+}
+
+function selectPickerRange(start, end) {
+  const s = Math.min(+start, +end);
+  const e = Math.max(+start, +end);
+
+  for (let i = s; i <= e; i++) {
+    const sn = String(i);
+    if (state.verses.nums.includes(sn)) {
+      state.pickerSelection.add(sn);
+    }
+  }
+
+  renderVerseGrid();
+}
+
+function clearPickerSelection() {
+  state.pickerSelection.clear();
+  state.pickerAnchor = null;
+  renderVerseGrid();
+  updatePickerUI();
+}
+
+function updatePickerUI() {
+  const count = state.pickerSelection.size;
+  $('verse-picker-count').textContent = count === 1 ? '1 verse selected' : `${count} verses selected`;
+  $('picker-copy-btn').disabled = count === 0;
+}
+
+function copyFromPicker() {
+  if (state.pickerSelection.size === 0) return;
+
+  // Transfer picker selection to main selection
+  state.selectedVerses = new Set(state.pickerSelection);
+
+  // Update the verse row checkboxes
+  renderVerses();
+  updateCopyUI();
+
+  // Close picker
+  closeVersePicker();
+
+  // Copy to clipboard
+  copyToClipboard();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
