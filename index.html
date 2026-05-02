@@ -2198,6 +2198,11 @@ async function autoLoadDefaults() {
   if (rightOk) { $('right-label').textContent = state.rightLabel; $('panel-right-label').textContent = state.rightLabel; $('tab-right').textContent = state.rightLabel; }
   populateBooks();
 
+  // Refresh book picker grid if it's open
+  if (state.bookPickerOpen) {
+    renderBookGrid();
+  }
+
   // Auto-open Genesis 1:1 if both Bibles loaded
   if (leftOk && rightOk) {
     // Must populate books first so the select has options
@@ -2680,6 +2685,17 @@ function renderBookGrid() {
   const grid = $('book-picker-grid');
   grid.innerHTML = '';
 
+  // Check if books are loaded
+  const availableBooks = getBooks();
+  if (availableBooks.length === 0) {
+    // Show loading state
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--muted); font-style: italic;';
+    loadingDiv.innerHTML = '<div class="spinner" style="margin: 0 auto 16px;"></div>Loading Bible data...';
+    grid.appendChild(loadingDiv);
+    return;
+  }
+
   // Add Old Testament header
   const otHeader = document.createElement('div');
   otHeader.className = 'book-testament-header';
@@ -2688,7 +2704,7 @@ function renderBookGrid() {
 
   // Add Old Testament books
   BIBLE_BOOKS.slice(0, OT_COUNT).forEach(book => {
-    const cell = createBookCell(book);
+    const cell = createBookCell(book, availableBooks.includes(book));
     grid.appendChild(cell);
   });
 
@@ -2700,19 +2716,18 @@ function renderBookGrid() {
 
   // Add New Testament books
   BIBLE_BOOKS.slice(OT_COUNT).forEach(book => {
-    const cell = createBookCell(book);
+    const cell = createBookCell(book, availableBooks.includes(book));
     grid.appendChild(cell);
   });
 }
 
-function createBookCell(book) {
+function createBookCell(book, hasBook) {
   const cell = document.createElement('div');
   cell.className = 'book-cell';
   cell.dataset.book = book;
   cell.textContent = book;
 
-  // Check if this book exists in the loaded Bible data
-  const hasBook = state.leftData && state.leftData[book];
+  // Disable if book doesn't exist in loaded Bible data
   if (!hasBook) {
     cell.classList.add('disabled');
     cell.style.opacity = '0.3';
