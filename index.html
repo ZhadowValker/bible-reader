@@ -1319,6 +1319,7 @@ const state = {
   bookPickerOpen: false,
   chapPickerOpen: false,
   pickerBook: '',
+  pickerBookKey: '',
   pickerChap: '',
 };
 
@@ -2661,6 +2662,42 @@ const BIBLE_BOOKS = [
 
 const OT_COUNT = 39;
 
+// Book name mappings for different Bible XML formats
+const BOOK_NAME_ALIASES = {
+  "Psalms": ["Psalms", "Psalm", "Ps", "Psalmów"],
+  "1 Samuel": ["1 Samuel", "1Samuel", "1 Sam", "1Sam"],
+  "2 Samuel": ["2 Samuel", "2Samuel", "2 Sam", "2Sam"],
+  "1 Kings": ["1 Kings", "1Kings", "1 Kgs", "1Kgs"],
+  "2 Kings": ["2 Kings", "2Kings", "2 Kgs", "2Kgs"],
+  "1 Chronicles": ["1 Chronicles", "1Chronicles", "1 Chr", "1Chr"],
+  "2 Chronicles": ["2 Chronicles", "2Chronicles", "2 Chr", "2Chr"],
+  "Song of Solomon": ["Song of Solomon", "Song of Songs", "Song", "Canticles", "Canticle of Canticles"],
+};
+
+// Find the actual key used in the Bible data
+function findBookKeyInData(bookName, data) {
+  if (!data) return null;
+
+  // Direct match
+  if (data[bookName]) return bookName;
+
+  // Check aliases
+  const aliases = BOOK_NAME_ALIASES[bookName];
+  if (aliases) {
+    for (const alias of aliases) {
+      if (data[alias]) return alias;
+    }
+  }
+
+  // Try case-insensitive match
+  const lowerBook = bookName.toLowerCase();
+  for (const key of Object.keys(data)) {
+    if (key.toLowerCase() === lowerBook) return key;
+  }
+
+  return null;
+}
+
 // Book Picker Functions
 function openBookPicker() {
   state.bookPickerOpen = true;
@@ -2704,7 +2741,8 @@ function renderBookGrid() {
 
   // Add Old Testament books
   BIBLE_BOOKS.slice(0, OT_COUNT).forEach(book => {
-    const cell = createBookCell(book, availableBooks.includes(book));
+    const actualKey = findBookKeyInData(book, state.leftData);
+    const cell = createBookCell(book, actualKey);
     grid.appendChild(cell);
   });
 
@@ -2716,38 +2754,41 @@ function renderBookGrid() {
 
   // Add New Testament books
   BIBLE_BOOKS.slice(OT_COUNT).forEach(book => {
-    const cell = createBookCell(book, availableBooks.includes(book));
+    const actualKey = findBookKeyInData(book, state.leftData);
+    const cell = createBookCell(book, actualKey);
     grid.appendChild(cell);
   });
 }
 
-function createBookCell(book, hasBook) {
+function createBookCell(displayName, actualKey) {
   const cell = document.createElement('div');
   cell.className = 'book-cell';
-  cell.dataset.book = book;
-  cell.textContent = book;
+  cell.dataset.book = displayName;
+  cell.dataset.actualKey = actualKey || '';
+  cell.textContent = displayName;
 
   // Disable if book doesn't exist in loaded Bible data
-  if (!hasBook) {
+  if (!actualKey) {
     cell.classList.add('disabled');
     cell.style.opacity = '0.3';
     cell.style.cursor = 'not-allowed';
   }
 
-  if (state.pickerBook === book) {
+  if (state.pickerBook === displayName) {
     cell.classList.add('selected');
   }
 
   cell.addEventListener('click', () => {
-    if (!hasBook) return;
-    selectBookFromPicker(book);
+    if (!actualKey) return;
+    selectBookFromPicker(displayName, actualKey);
   });
 
   return cell;
 }
 
-function selectBookFromPicker(book) {
-  state.pickerBook = book;
+function selectBookFromPicker(displayName, actualKey) {
+  state.pickerBook = displayName;
+  state.pickerBookKey = actualKey;
   renderBookGrid();
   updateBookPickerUI();
 }
@@ -2757,10 +2798,10 @@ function updateBookPickerUI() {
 }
 
 function confirmBookSelection() {
-  if (!state.pickerBook) return;
+  if (!state.pickerBook || !state.pickerBookKey) return;
 
-  // Select the book
-  selectBook(state.pickerBook);
+  // Select the book using the actual key from the data
+  selectBook(state.pickerBookKey);
 
   // Get chapters for this book
   const chaps = getChapters();
