@@ -931,23 +931,19 @@
     <div style="display:flex;align-items:center;gap:8px">
       <button class="copy-action-btn" id="btn-picker-open" onclick="openVersePicker()">📅 Select Verses</button>
       <div class="ribbon-divider"></div>
-      <span style="font-size:11px;color:var(--muted)">or</span>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input type="checkbox" id="select-all" class="copy-checkbox" onchange="toggleSelectAll()">
-        <label for="select-all" class="copy-label">Manual Select</label>
-      </div>
-    </div>
-    <div id="copy-side-selector" style="display:none;gap:6px">
+      <button class="copy-action-btn" onclick="selectAllVerses()">Select All</button>
       <div class="ribbon-divider"></div>
-      <span class="ribbon-label">Copy From</span>
+      <span class="ribbon-label">Copy</span>
       <button class="copy-side-btn active" id="copy-side-left" onclick="setCopySide('left')">Left</button>
       <button class="copy-side-btn" id="copy-side-right" onclick="setCopySide('right')">Right</button>
+      <button class="copy-side-btn" id="copy-side-both" onclick="setCopySide('both')">Both</button>
     </div>
-    <div id="copy-divider" class="ribbon-divider" style="display:none"></div>
-    <span id="copy-counter">0 selected</span>
-    <div style="margin-left:auto;display:flex;gap:8px">
-      <button class="copy-action-btn" onclick="cancelCopyMode()">Cancel</button>
-      <button class="copy-action-btn primary" id="copy-selected-btn" onclick="copyToClipboard()" disabled>Copy Selected</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+      <span id="copy-counter">0 selected</span>
+      <div style="display:flex;gap:8px">
+        <button class="copy-action-btn" onclick="cancelCopyMode()">Cancel</button>
+        <button class="copy-action-btn primary" id="copy-selected-btn" onclick="copyToClipboard()" disabled>Copy Selected</button>
+      </div>
     </div>
   </div>
 
@@ -1387,15 +1383,11 @@ function setParallel(p) {
     $('single-tabs').classList.toggle('visible', !p);
   }
 
-  // Update copy mode side selector visibility
-  if (state.copyMode) {
-    $('copy-side-selector').style.display = p ? 'flex' : 'none';
-    $('copy-divider').style.display = p ? 'block' : 'none';
-    if (!p) {
-      // In single mode, copy from active side
-      state.copySide = state.activeSide;
-      setCopySide(state.activeSide);
-    }
+  // Update copy mode side selection
+  if (state.copyMode && !p) {
+    // In single mode, copy from active side
+    state.copySide = state.activeSide;
+    setCopySide(state.activeSide);
   }
 
   equaliseVerseHeights();
@@ -2037,8 +2029,6 @@ function toggleCopyMode() {
 
   const copyBtn = $('copy-btn');
   const copyBar = $('copy-bar');
-  const sideSelector = $('copy-side-selector');
-  const copyDivider = $('copy-divider');
 
   if (state.copyMode) {
     // Enter copy mode
@@ -2046,15 +2036,10 @@ function toggleCopyMode() {
     copyBtn.title = 'Exit copy mode';
     copyBar.classList.add('visible');
 
-    // Show side selector in parallel mode
-    if (state.parallel) {
-      sideSelector.style.display = 'flex';
-      copyDivider.style.display = 'block';
-    } else {
-      sideSelector.style.display = 'none';
-      copyDivider.style.display = 'none';
-      // In single mode, copy from active side
+    // In single mode, default to active side
+    if (!state.parallel) {
       state.copySide = state.activeSide;
+      setCopySide(state.activeSide);
     }
 
     // Re-render verses to show checkboxes
@@ -2065,12 +2050,9 @@ function toggleCopyMode() {
     copyBtn.classList.remove('active-copy');
     copyBtn.title = 'Copy verses';
     copyBar.classList.remove('visible');
-    sideSelector.style.display = 'none';
-    copyDivider.style.display = 'none';
 
     // Clear selection
     state.selectedVerses.clear();
-    $('select-all').checked = false;
 
     // Re-render verses to hide checkboxes
     renderVerses();
@@ -2086,26 +2068,23 @@ function setCopySide(side) {
   $('copy-side-left').classList.toggle('active', side === 'left');
   $('copy-side-right').classList.toggle('active', side === 'right');
   $('copy-side-right').classList.toggle('right', side === 'right');
+  $('copy-side-both').classList.toggle('active', side === 'both');
 }
 
-function toggleSelectAll() {
-  const checkbox = $('select-all');
+function selectAllVerses() {
   const allVerses = state.verses?.nums || [];
 
-  if (checkbox.checked) {
-    allVerses.forEach(n => state.selectedVerses.add(n));
-  } else {
-    state.selectedVerses.clear();
-  }
+  // Select all verses
+  allVerses.forEach(n => state.selectedVerses.add(n));
 
   // Update all verse checkboxes
   document.querySelectorAll('.verse-checkbox').forEach(cb => {
-    cb.checked = checkbox.checked;
+    cb.checked = true;
   });
 
   // Update row styling
   document.querySelectorAll('.verse-row').forEach(row => {
-    row.classList.toggle('selected', checkbox.checked);
+    row.classList.add('selected');
   });
 
   updateCopyUI();
@@ -2148,22 +2127,47 @@ function copyToClipboard() {
   const books = getBooks();
   const rBooks = getRightBooks();
   const bIdx = books.indexOf(state.book);
-  const bookName = side === 'left' ? state.book : (rBooks[bIdx] || state.book);
+  const leftBookName = state.book;
+  const rightBookName = rBooks[bIdx] || state.book;
 
-  // Get the version name based on side
-  const versionName = side === 'left' ? state.leftLabel : state.rightLabel;
-  const cleanVersion = versionName ? versionName.replace(/[()]/g, '').trim() : (side === 'left' ? 'Left' : 'Right');
+  let fullText = '';
 
-  // Build the reference string with version
-  const reference = formatReference(bookName, state.chap, selectedNums, cleanVersion);
+  if (side === 'both') {
+    // Copy from both sides
+    const leftVersion = state.leftLabel ? state.leftLabel.replace(/[()]/g, '').trim() : 'Left';
+    const rightVersion = state.rightLabel ? state.rightLabel.replace(/[()]/g, '').trim() : 'Right';
 
-  // Build the content
-  const lines = selectedNums.map(n => {
-    const text = verses[side][n] || '';
-    return `${n}. ${text}`;
-  });
+    const leftRef = formatReference(leftBookName, state.chap, selectedNums, leftVersion);
+    const rightRef = formatReference(rightBookName, state.chap, selectedNums, rightVersion);
 
-  const fullText = `${reference}\n\n${lines.join('\n')}`;
+    // Build left content
+    const leftLines = selectedNums.map(n => {
+      const text = verses.left[n] || '';
+      return `${n}. ${text}`;
+    });
+
+    // Build right content
+    const rightLines = selectedNums.map(n => {
+      const text = verses.right[n] || '';
+      return `${n}. ${text}`;
+    });
+
+    fullText = `${leftRef}\n\n${leftLines.join('\n')}\n\n---\n\n${rightRef}\n\n${rightLines.join('\n')}`;
+  } else {
+    // Copy from single side
+    const bookName = side === 'left' ? leftBookName : rightBookName;
+    const versionName = side === 'left' ? state.leftLabel : state.rightLabel;
+    const cleanVersion = versionName ? versionName.replace(/[()]/g, '').trim() : (side === 'left' ? 'Left' : 'Right');
+
+    const reference = formatReference(bookName, state.chap, selectedNums, cleanVersion);
+
+    const lines = selectedNums.map(n => {
+      const text = verses[side][n] || '';
+      return `${n}. ${text}`;
+    });
+
+    fullText = `${reference}\n\n${lines.join('\n')}`;
+  }
 
   // Copy to clipboard
   navigator.clipboard.writeText(fullText).then(() => {
@@ -2220,8 +2224,16 @@ function openVersePicker() {
   const rBooks = getRightBooks();
   const bIdx = books.indexOf(state.book);
   const rBook = bIdx >= 0 ? (rBooks[bIdx] || state.book) : '';
-  const displayBook = state.copySide === 'left' ? state.book : rBook;
-  $('verse-picker-ref').textContent = `${displayBook} ${state.chap}`;
+
+  let displayRef = '';
+  if (state.copySide === 'left') {
+    displayRef = `${state.book} ${state.chap}`;
+  } else if (state.copySide === 'right') {
+    displayRef = `${rBook} ${state.chap}`;
+  } else {
+    displayRef = `${state.book} / ${rBook} ${state.chap}`;
+  }
+  $('verse-picker-ref').textContent = displayRef;
 
   renderVerseGrid();
   updatePickerUI();
