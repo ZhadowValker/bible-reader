@@ -421,6 +421,184 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.45); }
+
+  /* ── Copy Feature ── */
+  /* Copy button next to play button */
+  #copy-btn {
+    border-left: 1px solid var(--bar-border) !important;
+    border-right: 1px solid var(--bar-border) !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-radius: 0 !important;
+    height: 36px !important;
+    width: 34px !important;
+    margin-left: 0 !important;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  #copy-btn:hover:not(:disabled) {
+    background: var(--gold-faint);
+    color: var(--gold);
+  }
+  #copy-btn.active-copy {
+    background: var(--btn-active-bg) !important;
+    color: var(--btn-active-text) !important;
+    box-shadow: 0 0 8px var(--hl-border);
+  }
+  #copy-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* Copy controls bar */
+  #copy-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--panel-head);
+    border-bottom: 1px solid var(--bar-border);
+    flex-shrink: 0;
+  }
+  #copy-bar.visible {
+    display: flex;
+    animation: fadeDown 0.2s ease;
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Select all checkbox */
+  .copy-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--gold);
+  }
+  .copy-label {
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* Copy counter */
+  #copy-counter {
+    font-size: 11px;
+    color: var(--gold);
+    font-weight: bold;
+    min-width: 80px;
+  }
+
+  /* Side selector in copy mode */
+  .copy-side-btn {
+    border: 1px solid var(--gold-border);
+    background: var(--btn-inactive-bg);
+    color: var(--btn-inactive-text);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 10px;
+    font-family: Georgia, serif;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+  .copy-side-btn.active {
+    background: var(--btn-active-bg);
+    color: var(--btn-active-text);
+    border-color: transparent;
+  }
+  .copy-side-btn.right.active {
+    background: linear-gradient(135deg, #4a7a99, #8ab4c9);
+  }
+
+  /* Copy action buttons */
+  .copy-action-btn {
+    border: 1px solid var(--gold-border);
+    background: transparent;
+    color: var(--gold);
+    border-radius: 4px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: Georgia, serif;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+  .copy-action-btn:hover:not(:disabled) {
+    background: var(--gold-faint);
+  }
+  .copy-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: var(--muted);
+    border-color: var(--bar-border);
+  }
+  .copy-action-btn.primary {
+    background: var(--btn-active-bg);
+    color: var(--btn-active-text);
+    border-color: transparent;
+  }
+  .copy-action-btn.primary:hover:not(:disabled) {
+    background: var(--btn-active-bg);
+    filter: brightness(1.1);
+  }
+
+  /* Verse checkboxes */
+  .verse-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--gold);
+    flex-shrink: 0;
+    margin-right: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .verse-checkbox.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Selected verse highlight */
+  .verse-row.selected {
+    background: var(--gold-faint);
+    border-left-color: var(--gold);
+  }
+
+  /* Copy feedback toast */
+  #copy-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--bar);
+    border: 1px solid var(--gold-border);
+    border-radius: 6px;
+    padding: 12px 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 3000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  #copy-toast.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  #copy-toast-text {
+    font-size: 13px;
+    color: var(--verse);
+    font-style: italic;
+  }
 </style>
 </head>
 <body>
@@ -563,7 +741,8 @@
         height:36px;margin-right:4px;
       ">▭</button>
       <button id="chap-btn" onclick="toggleChapDrop()">Ch. —</button>
-      <button class="btn-round" id="play-btn" title="Auto-scroll" style="width:28px;height:28px;border-left:none;border-radius:0 4px 4px 0;margin-left:-1px">▶</button>
+      <button class="btn-round" id="play-btn" title="Auto-scroll" style="width:28px;height:28px;border-left:none;border-radius:0;margin-left:-1px">▶</button>
+      <button id="copy-btn" title="Copy verses" onclick="toggleCopyMode()" disabled>📋</button>
       <div id="chap-dropdown"></div>
     </div>
     <div id="infobar-right" onclick="openBookSelect()" title="Select book" style="cursor:pointer">
@@ -572,6 +751,26 @@
     <div style="display:flex;align-items:center;flex-shrink:0">
       <button class="btn-nav" id="nav-next-chap" onclick="goNextChap()" disabled>›</button>
       <button class="btn-nav" id="nav-next-book" onclick="goNextBook()" disabled>»</button>
+    </div>
+  </div>
+
+  <!-- Copy controls bar -->
+  <div id="copy-bar">
+    <div style="display:flex;align-items:center;gap:6px">
+      <input type="checkbox" id="select-all" class="copy-checkbox" onchange="toggleSelectAll()">
+      <label for="select-all" class="copy-label">Select All</label>
+    </div>
+    <div class="ribbon-divider"></div>
+    <div id="copy-side-selector" style="display:none;gap:6px">
+      <span class="ribbon-label">Copy From</span>
+      <button class="copy-side-btn active" id="copy-side-left" onclick="setCopySide('left')">Left</button>
+      <button class="copy-side-btn" id="copy-side-right" onclick="setCopySide('right')">Right</button>
+    </div>
+    <div id="copy-divider" class="ribbon-divider" style="display:none"></div>
+    <span id="copy-counter">0 selected</span>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="copy-action-btn" onclick="cancelCopyMode()">Cancel</button>
+      <button class="copy-action-btn primary" id="copy-selected-btn" onclick="copyToClipboard()" disabled>Copy Selected</button>
     </div>
   </div>
 
@@ -682,6 +881,10 @@ const state = {
   dark: true, ribbonOpen: false,
   modalSide: null, modalMethod: null,
   chapDropOpen: false,
+  // Copy feature state
+  copyMode: false,
+  selectedVerses: new Set(),
+  copySide: 'left',
 };
 
 const BOOK_NAMES = {1:"Genesis",2:"Exodus",3:"Leviticus",4:"Numbers",5:"Deuteronomy",6:"Joshua",7:"Judges",8:"Ruth",9:"1 Samuel",10:"2 Samuel",11:"1 Kings",12:"2 Kings",13:"1 Chronicles",14:"2 Chronicles",15:"Ezra",16:"Nehemiah",17:"Esther",18:"Job",19:"Psalms",20:"Proverbs",21:"Ecclesiastes",22:"Song of Solomon",23:"Isaiah",24:"Jeremiah",25:"Lamentations",26:"Ezekiel",27:"Daniel",28:"Hosea",29:"Joel",30:"Amos",31:"Obadiah",32:"Jonah",33:"Micah",34:"Nahum",35:"Habakkuk",36:"Zephaniah",37:"Haggai",38:"Zechariah",39:"Malachi",40:"Matthew",41:"Mark",42:"Luke",43:"John",44:"Acts",45:"Romans",46:"1 Corinthians",47:"2 Corinthians",48:"Galatians",49:"Ephesians",50:"Philippians",51:"Colossians",52:"1 Thessalonians",53:"2 Thessalonians",54:"1 Timothy",55:"2 Timothy",56:"Titus",57:"Philemon",58:"Hebrews",59:"James",60:"1 Peter",61:"2 Peter",62:"1 John",63:"2 John",64:"3 John",65:"Jude",66:"Revelation"};
@@ -972,6 +1175,18 @@ function setParallel(p) {
   if (state.verses) {
     $('single-tabs').classList.toggle('visible', !p);
   }
+
+  // Update copy mode side selector visibility
+  if (state.copyMode) {
+    $('copy-side-selector').style.display = p ? 'flex' : 'none';
+    $('copy-divider').style.display = p ? 'block' : 'none';
+    if (!p) {
+      // In single mode, copy from active side
+      state.copySide = state.activeSide;
+      setCopySide(state.activeSide);
+    }
+  }
+
   equaliseVerseHeights();
   setTimeout(drawVerseLines, 50);
   updateSliders();
@@ -1092,6 +1307,10 @@ $('sel-verse').addEventListener('change', e => scrollToVerse(e.target.value));
 // ── Read ──────────────────────────────────────────────────────────────────────
 function readChap() {
   if (!state.book || !state.chap || !state.leftData || !state.rightData) return;
+
+  // Exit copy mode when changing chapters
+  if (state.copyMode) cancelCopyMode();
+
   const tV = state.leftData[state.book]?.[state.chap] || {};
   const books = getBooks(), rBooks = getRightBooks();
   const bIdx = books.indexOf(state.book);
@@ -1100,6 +1319,10 @@ function readChap() {
   const nums = [...new Set([...Object.keys(tV), ...Object.keys(nV)])].sort((a,b) => +a - +b);
   state.verses = { left: tV, right: nV, nums };
   state.verse = ''; setAuto(false); closeChapDrop();
+
+  // Enable copy button now that verses are loaded
+  $('copy-btn').disabled = false;
+
   renderVerses();
   updateRead();
   populateVerses();
@@ -1135,12 +1358,35 @@ function renderPanel(id, side) {
     const row = document.createElement('div');
     row.className = 'verse-row';
     row.dataset.vnum = n;
+    if (state.selectedVerses.has(n)) row.classList.add('selected');
     row.style.animationDelay = `${i * 10}ms`;
     row.style.fontSize = state.fontSize + 'px';
+
+    // Build checkbox HTML if in copy mode
+    const checkboxHtml = state.copyMode ? `
+      <input type="checkbox" class="verse-checkbox visible" data-vnum="${n}"
+        ${state.selectedVerses.has(n) ? 'checked' : ''}
+        onclick="event.stopPropagation(); selectVerse('${n}', this.checked)">
+    ` : '<input type="checkbox" class="verse-checkbox" style="display:none">';
+
     row.innerHTML = `
+      ${checkboxHtml}
       <div class="verse-num" style="font-size:${Math.max(9, state.fontSize - 4)}px">${n}</div>
       <div class="verse-text" style="font-size:${state.fontSize}px">${text}</div>
     `;
+
+    // Click verse row to toggle checkbox in copy mode
+    if (state.copyMode) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', (e) => {
+        if (e.target.type !== 'checkbox') {
+          const cb = row.querySelector('.verse-checkbox');
+          cb.checked = !cb.checked;
+          selectVerse(n, cb.checked);
+        }
+      });
+    }
+
     el.appendChild(row);
   });
 }
@@ -1375,6 +1621,13 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#chap-btn') && !e.target.closest('#chap-dropdown')) closeChapDrop();
 });
 
+// Escape key to exit copy mode
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state.copyMode) {
+    cancelCopyMode();
+  }
+});
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
 function openModal(side) {
   state.modalSide = side;
@@ -1562,6 +1815,178 @@ async function autoLoadDefaults() {
   hideSplash();
 }
 
+// ── Copy Feature ─────────────────────────────────────────────────────────────
+function toggleCopyMode() {
+  if (!state.verses) return;
+  state.copyMode = !state.copyMode;
+
+  const copyBtn = $('copy-btn');
+  const copyBar = $('copy-bar');
+  const sideSelector = $('copy-side-selector');
+  const copyDivider = $('copy-divider');
+
+  if (state.copyMode) {
+    // Enter copy mode
+    copyBtn.classList.add('active-copy');
+    copyBtn.title = 'Exit copy mode';
+    copyBar.classList.add('visible');
+
+    // Show side selector in parallel mode
+    if (state.parallel) {
+      sideSelector.style.display = 'flex';
+      copyDivider.style.display = 'block';
+    } else {
+      sideSelector.style.display = 'none';
+      copyDivider.style.display = 'none';
+      // In single mode, copy from active side
+      state.copySide = state.activeSide;
+    }
+
+    // Re-render verses to show checkboxes
+    renderVerses();
+    updateCopyUI();
+  } else {
+    // Exit copy mode
+    copyBtn.classList.remove('active-copy');
+    copyBtn.title = 'Copy verses';
+    copyBar.classList.remove('visible');
+    sideSelector.style.display = 'none';
+    copyDivider.style.display = 'none';
+
+    // Clear selection
+    state.selectedVerses.clear();
+    $('select-all').checked = false;
+
+    // Re-render verses to hide checkboxes
+    renderVerses();
+  }
+}
+
+function cancelCopyMode() {
+  if (state.copyMode) toggleCopyMode();
+}
+
+function setCopySide(side) {
+  state.copySide = side;
+  $('copy-side-left').classList.toggle('active', side === 'left');
+  $('copy-side-right').classList.toggle('active', side === 'right');
+  $('copy-side-right').classList.toggle('right', side === 'right');
+}
+
+function toggleSelectAll() {
+  const checkbox = $('select-all');
+  const allVerses = state.verses?.nums || [];
+
+  if (checkbox.checked) {
+    allVerses.forEach(n => state.selectedVerses.add(n));
+  } else {
+    state.selectedVerses.clear();
+  }
+
+  // Update all verse checkboxes
+  document.querySelectorAll('.verse-checkbox').forEach(cb => {
+    cb.checked = checkbox.checked;
+  });
+
+  // Update row styling
+  document.querySelectorAll('.verse-row').forEach(row => {
+    row.classList.toggle('selected', checkbox.checked);
+  });
+
+  updateCopyUI();
+}
+
+function selectVerse(vnum, selected) {
+  if (selected) {
+    state.selectedVerses.add(vnum);
+  } else {
+    state.selectedVerses.delete(vnum);
+  }
+
+  // Update the row styling
+  document.querySelectorAll(`.verse-row[data-vnum="${vnum}"]`).forEach(row => {
+    row.classList.toggle('selected', selected);
+  });
+
+  // Update select all checkbox state
+  const allVerses = state.verses?.nums || [];
+  $('select-all').checked = state.selectedVerses.size === allVerses.length && allVerses.length > 0;
+  $('select-all').indeterminate = state.selectedVerses.size > 0 && state.selectedVerses.size < allVerses.length;
+
+  updateCopyUI();
+}
+
+function updateCopyUI() {
+  const count = state.selectedVerses.size;
+  $('copy-counter').textContent = count === 1 ? '1 verse selected' : `${count} verses selected`;
+  $('copy-selected-btn').disabled = count === 0;
+}
+
+function copyToClipboard() {
+  if (state.selectedVerses.size === 0) return;
+
+  const selectedNums = [...state.selectedVerses].sort((a, b) => +a - +b);
+  const side = state.copySide;
+  const verses = state.verses;
+
+  // Get the appropriate book name
+  const books = getBooks();
+  const rBooks = getRightBooks();
+  const bIdx = books.indexOf(state.book);
+  const bookName = side === 'left' ? state.book : (rBooks[bIdx] || state.book);
+
+  // Build the reference string
+  const reference = formatReference(bookName, state.chap, selectedNums);
+
+  // Build the content
+  const lines = selectedNums.map(n => {
+    const text = verses[side][n] || '';
+    return `${n}. ${text}`;
+  });
+
+  const fullText = `${reference}\n\n${lines.join('\n')}`;
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(fullText).then(() => {
+    showCopyToast(`${selectedNums.length} verse${selectedNums.length === 1 ? '' : 's'} copied!`);
+    // Exit copy mode after successful copy
+    setTimeout(() => cancelCopyMode(), 500);
+  }).catch(err => {
+    showCopyToast('Failed to copy. Please try again.');
+    console.error('Copy failed:', err);
+  });
+}
+
+function formatReference(book, chapter, verseNums) {
+  const sorted = [...verseNums].sort((a, b) => +a - +b);
+
+  // Find ranges
+  const ranges = [];
+  let start = +sorted[0];
+  let end = +sorted[0];
+
+  for (let i = 1; i < sorted.length; i++) {
+    if (+sorted[i] === end + 1) {
+      end = +sorted[i];
+    } else {
+      ranges.push(start === end ? `${start}` : `${start}-${end}`);
+      start = end = +sorted[i];
+    }
+  }
+  ranges.push(start === end ? `${start}` : `${start}-${end}`);
+
+  return `${book} ${chapter}:${ranges.join(', ')}`;
+}
+
+function showCopyToast(message) {
+  const toast = $('copy-toast');
+  $('copy-toast-text').textContent = message;
+  toast.classList.add('visible');
+  setTimeout(() => {
+    toast.classList.remove('visible');
+  }, 2500);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 updateSliders();
 updateEmptyPanels();
@@ -1569,5 +1994,11 @@ updateChapBtn();
 window.addEventListener('resize', scheduleLineRedraw);
 autoLoadDefaults();
 </script>
+
+<!-- Copy feedback toast -->
+<div id="copy-toast">
+  <div id="copy-toast-text">Copied to clipboard!</div>
+</div>
+
 </body>
 </html>
