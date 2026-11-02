@@ -8,7 +8,7 @@ Once deployed: `https://<your-username>.github.io/<repo-name>/`
 
 ## How it works
 
-- Single `index.html` — zero dependencies, zero build step
+- `index.html` plus two small script files (`timeline.js`, `timeline-data.js`) — zero dependencies, zero build step
 - Fetches Telugu Bible (BSI) and NIV (UK) directly from `raw.githubusercontent.com`
 - No CORS proxy needed — GitHub Pages is served over HTTPS so `raw.githubusercontent.com` (which sends `Access-Control-Allow-Origin: *`) is fetched directly
 
@@ -23,8 +23,10 @@ Once deployed: `https://<your-username>.github.io/<repo-name>/`
 
 ### Step 2 — Upload the files
 
-Upload these two files to your repo (drag & drop in the GitHub UI):
+Upload these files to your repo (drag & drop in the GitHub UI):
 - `index.html`
+- `timeline.js`
+- `timeline-data.js`
 - `.github/workflows/deploy.yml`
 
 Or use git:
@@ -62,3 +64,4 @@ python -m http.server 8080
 - Adjustable font size
 - Single-panel mode
 - Load any other Zefania/OSIS XML via file upload or paste
+- **⏳ Timeline explorer** (toolbar button): zoomable timeline with lanes for patriarchs, kingdoms, prophets, world powers and the New Testament, plus a 66-book chart of the period each book covers. Toggle between conventional and Ussher (Adams 1881) dates, search, and click any entry to open the passage in the reader. Data lives in `timeline-data.js`.
