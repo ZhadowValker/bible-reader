@@ -982,6 +982,7 @@
   <!-- Toolbar -->
   <div id="toolbar">
     <span id="toolbar-title">✝ Bible Reader</span>
+    <button id="tl-btn-open" onclick="openTimeline()" title="Bible timeline explorer">⏳ Timeline</button>
     <span id="toolbar-status">Load XML files to begin</span>
     <button class="btn-settings" id="ribbon-toggle">☰ ▼</button>
   </div>
@@ -1294,6 +1295,8 @@
   </div>
 </div>
 
+<script src="timeline-data.js"></script>
+<script src="timeline.js"></script>
 <script>
 // ── State ────────────────────────────────────────────────────────────────────
 const state = {
